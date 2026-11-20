@@ -53,7 +53,10 @@ namespace Fodinha.Game.UI
         private Text subtitle;
         private RectTransform list;
         private Button menuButton;
+        private Button againButton;
         private readonly List<Text> rows = new List<Text>();
+
+        public void SetPlayAgainLabel(string label) => UiKit.ButtonLabel(againButton).text = label;
 
         public event Action PlayAgainClicked;
         public event Action MenuClicked;
@@ -86,8 +89,8 @@ namespace Fodinha.Game.UI
 
             list = UiKit.Rect("Classificacao", box.transform).Anchor(0.06f, 0.2f, 0.94f, 0.79f);
 
-            var again = UiKit.Button("JogarDeNovo", box.transform, "Jogar de novo", () => PlayAgainClicked?.Invoke(), Palette.Button, Palette.ButtonText, 46);
-            again.GetComponent<RectTransform>().Anchor(0.06f, 0.04f, 0.94f, 0.12f);
+            againButton = UiKit.Button("JogarDeNovo", box.transform, "Jogar de novo", () => PlayAgainClicked?.Invoke(), Palette.Button, Palette.ButtonText, 46);
+            againButton.GetComponent<RectTransform>().Anchor(0.06f, 0.04f, 0.94f, 0.12f);
 
             menuButton = UiKit.Button("Menu", box.transform, "Menu principal", () => MenuClicked?.Invoke(), Palette.ButtonSecondary, Palette.Text, 40);
             menuButton.GetComponent<RectTransform>().Anchor(0.06f, 0.13f, 0.94f, 0.19f);

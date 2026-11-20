@@ -28,6 +28,7 @@ namespace Fodinha.Game.Menu
         private RectTransform roomsList;
         private Text roomsEmpty;
         private InputField nameField;
+        private InputField serverField;
         private OptionStepper soundStepper;
         private OptionStepper vibrationStepper;
         private Image toastBg;
@@ -89,6 +90,7 @@ namespace Fodinha.Game.Menu
                     break;
                 case Page.Settings:
                     nameField.text = GamePrefs.HasCustomName ? GamePrefs.PlayerName : "";
+                    serverField.text = GamePrefs.HasCustomServer ? GamePrefs.ServerUrl : "";
                     soundStepper.SetIndex(GamePrefs.SoundOn ? 1 : 0);
                     vibrationStepper.SetIndex(GamePrefs.VibrationOn ? 1 : 0);
                     break;
@@ -277,6 +279,16 @@ namespace Fodinha.Game.Menu
 
             var how = UiKit.Button("ComoJogar", content, "Como jogar", () => ShowPage(Page.HowToPlay), Palette.ButtonSecondary, Palette.Text, 40);
             UiControls.SetHeight(how, 104f);
+
+            var serverLabel = UiKit.Label("RotuloServidor", content, "Servidor (avançado)", 32, Palette.TextMuted, TextAnchor.LowerLeft, FontStyle.Bold);
+            UiControls.SetHeight(serverLabel, 56f);
+            serverField = UiControls.TextField("Servidor", content, GamePrefs.DefaultServerUrl, 30, 120);
+            UiControls.SetHeight(serverField, 90f);
+            serverField.onEndEdit.AddListener(value =>
+            {
+                GamePrefs.ServerUrl = value;
+                serverField.text = GamePrefs.HasCustomServer ? GamePrefs.ServerUrl : "";
+            });
 
             var version = UiKit.Label("Versao", content, "Fodinha Online · versão " + Application.version, 30, Palette.TextMuted,
                                       TextAnchor.MiddleCenter, FontStyle.Normal);

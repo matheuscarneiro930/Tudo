@@ -91,6 +91,13 @@ namespace Fodinha.Game.UI
             session = null;
         }
 
+        /// <summary>Texto do botão principal da tela de fim (offline: "Jogar de novo"; online: "Voltar à sala").</summary>
+        public void SetPlayAgainLabel(string label)
+        {
+            EnsureBuilt();
+            matchOverPanel.SetPlayAgainLabel(label);
+        }
+
         // ------------------------------------------------------------------ montagem
 
         private void EnsureBuilt()

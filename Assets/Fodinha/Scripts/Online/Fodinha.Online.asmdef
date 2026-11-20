@@ -1,0 +1,22 @@
+{
+    "name": "Fodinha.Online",
+    "rootNamespace": "Fodinha.Online",
+    "references": [
+        "Fodinha.Core",
+        "Fodinha.Hosting",
+        "Fodinha.Net",
+        "Fodinha.Game",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Newtonsoft.Json.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

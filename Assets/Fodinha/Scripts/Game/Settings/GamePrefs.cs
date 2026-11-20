@@ -15,7 +15,37 @@ namespace Fodinha.Game
         private const string KeyOfflineRules = "fodinha.offline.regras";
         private const string KeyRoomOptions = "fodinha.sala.opcoes";
 
+        private const string KeyServerUrl = "fodinha.servidor";
+        private const string KeyOnlineToken = "fodinha.token";
+
         public const int MaxNameLength = 14;
+
+        /// <summary>Servidor padrão do jogo online. Trocado para o endereço público quando o servidor for hospedado.</summary>
+        public const string DefaultServerUrl = "ws://localhost:5080/ws";
+
+        /// <summary>Endereço do servidor (Configurações → Servidor). Vazio = padrão.</summary>
+        public static string ServerUrl
+        {
+            get
+            {
+                var url = PlayerPrefs.GetString(KeyServerUrl, "");
+                return string.IsNullOrWhiteSpace(url) ? DefaultServerUrl : url.Trim();
+            }
+            set
+            {
+                PlayerPrefs.SetString(KeyServerUrl, value == null || value.Trim() == DefaultServerUrl ? "" : value.Trim());
+                PlayerPrefs.Save();
+            }
+        }
+
+        public static bool HasCustomServer => !string.IsNullOrWhiteSpace(PlayerPrefs.GetString(KeyServerUrl, ""));
+
+        /// <summary>Token secreto dado pelo servidor: permite reconectar e voltar ao mesmo lugar na sala.</summary>
+        public static string OnlineToken
+        {
+            get => PlayerPrefs.GetString(KeyOnlineToken, "");
+            set { PlayerPrefs.SetString(KeyOnlineToken, value ?? ""); PlayerPrefs.Save(); }
+        }
 
         public static string PlayerName
         {

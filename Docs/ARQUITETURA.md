@@ -89,9 +89,33 @@ Editor (`Assets/Fodinha/Editor`): `SceneBuilder` monta as cenas, `ProjectConfigu
 | `Settings/GamePrefs.cs` | Preferências no aparelho (nome, som, vibração, últimas regras/sala). |
 | `Hosting/RoomCode.cs`, `RoomListing.cs` | Código de sala (6 caracteres sem ambiguidade), opções da sala, item da lista pública. |
 
+## Online (servidor .NET próprio) ✅
+
+Escolha: em vez de um celular ser o host (Photon Fusion modo Host), um **servidor .NET** é a autoridade.
+Ele roda o MESMO núcleo (`MatchEngine` + `MatchDirector`); nenhum celular "segura" a partida.
+
+```
+App (Unity)                         Servidor (Server/Fodinha.Server, ASP.NET Core)
+OnlineClient ── WebSocket JSON ──►  GameHost (fila única) ──► ServerCore (salas, lobby)
+NetworkMatchSession ◄── visão ────  MatchEngine.BuildView(assento) → ViewMapper → só para aquele jogador
+```
+
+| Onde | Arquivo | Responsabilidade |
+|---|---|---|
+| `Scripts/Net` (compartilhado) | `Protocol.cs`, `Messages.cs` | Mensagens `{t, d}`: hello, criar/entrar/sair, regras, bots, iniciar, apostar, jogar, voltar a jogar; respostas welcome, room_state, match, room_list, error. |
+| | `ViewMapper.cs` | `MatchView` ⇄ formato de rede (o servidor só converte o que `BuildView` já filtrou). |
+| `Server/Fodinha.Server` | `ServerCore.cs` | Jogadores (token de reconexão), salas com código, dono, bots no lobby, início, ações validadas, saída/forfeit, desconexão → bot joga, limpeza de salas. Não é thread-safe de propósito: tudo passa por uma fila. |
+| | `GameHost.cs`, `Program.cs` | WebSocket em `/ws`, laço de 50 ms, `/health`. Porta pela variável `PORT`. |
+| `Scripts/Online` (Unity) | `OnlineClient.cs` | Conexão, fila de envio, reconexão automática com token, eventos na thread principal. |
+| | `NetworkMatchSession.cs` | `IMatchSession` online (a mesma `MatchScreen` do offline). |
+| | `OnlineMenuHandler.cs`, `LobbyScreen.cs`, `LobbyRoot.cs`, `OnlineGameRoot.cs` | Menu online, sala de espera e partida online. |
+
+Hospedagem: `Dockerfile` + `render.yaml` (Render, plano gratuito). Endereço configurável em Configurações → Servidor.
+
 ## Próximas camadas (a fazer)
 
-1. **Rede (modo Host)**: sessão com código, salas públicas/privadas, `NetworkMatch` no host chamando o `MatchEngine`,
+1. **Polimento** (animações, sons, ícone) e **build Android**.
+2. ~~Rede (modo Host)~~ (substituído pelo servidor próprio acima): sessão com código, salas públicas/privadas, `NetworkMatch` no host chamando o `MatchEngine`,
    mão privada entregue só ao dono (objeto por jogador com *Object Interest = Explicit*, ou RPC direcionado).
 4. **Fusion 2 (modo Server)** antes das salas públicas: o mesmo núcleo roda no servidor dedicado (sem trapaça do host).
 5. Perfil/ranking, polimento, publicação.

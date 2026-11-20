@@ -11,4 +11,10 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Fodinha/Scenes/PartidaOffline.unity
     guid: 9896131db42259340b1dc5bd765a6351
+  - enabled: 1
+    path: Assets/Fodinha/Scenes/Sala.unity
+    guid: 28b8285f45659624fa6c2be4fd2cc62a
+  - enabled: 1
+    path: Assets/Fodinha/Scenes/PartidaOnline.unity
+    guid: e1a99bb3755ec294b85d41fa6aacbc0c
   m_configObjects: {}

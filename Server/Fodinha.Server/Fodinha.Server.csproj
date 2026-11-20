@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!-- Servidor do Fodinha Online: salas, lobby e partidas. Usa o MESMO núcleo de regras do app (Assets/Fodinha/Scripts). -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>Fodinha.Server</RootNamespace>
+    <AssemblyName>Fodinha.Server</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../Tools/CoreBuild/Fodinha.Core.csproj" />
+    <ProjectReference Include="../../Tools/HostingBuild/Fodinha.Hosting.csproj" />
+    <ProjectReference Include="../../Tools/NetBuild/Fodinha.Net.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Fodinha.Server.Tests" />
+  </ItemGroup>
+</Project>

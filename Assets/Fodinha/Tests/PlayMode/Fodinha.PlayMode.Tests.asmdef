@@ -4,8 +4,12 @@
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
+        "UnityEngine.UI",
         "Fodinha.Core",
-        "Fodinha.Game"
+        "Fodinha.Hosting",
+        "Fodinha.Net",
+        "Fodinha.Game",
+        "Fodinha.Online"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -58,17 +58,34 @@ namespace Fodinha.PlayMode.Tests
         }
 
         [UnityTest]
-        public IEnumerator Menu_SemOnline_AvisaJogador()
+        public IEnumerator Menu_ServidorForaDoAr_AvisaJogador()
         {
-            SceneManager.LoadScene("Menu");
-            yield return WaitForScene("Menu");
-            var menu = Object.FindAnyObjectByType<MenuRoot>().Screen;
+            string previous = GamePrefs.HasCustomServer ? GamePrefs.ServerUrl : "";
+            GamePrefs.ServerUrl = "ws://127.0.0.1:1/ws"; // porta onde não há servidor
+            try
+            {
+                SceneManager.LoadScene("Menu");
+                yield return WaitForScene("Menu");
+                var menu = Object.FindAnyObjectByType<MenuRoot>().Screen;
 
-            menu.ShowPage(MenuScreen.Page.JoinRoom);
-            menu.CodeField.text = "ABC234";
-            menu.JoinButton.onClick.Invoke();
-            yield return null;
-            Assert.That(menu.LastToast, Does.Contain("online"));
+                menu.ShowPage(MenuScreen.Page.JoinRoom);
+                menu.CodeField.text = "ABC234";
+                menu.JoinButton.onClick.Invoke();
+
+                float t = 0f;
+                while (!menu.LastToast.Contains("servidor") && t < 25f)
+                {
+                    t += Time.unscaledDeltaTime;
+                    yield return null;
+                }
+                Assert.That(menu.LastToast, Does.Contain("servidor"));
+                Assert.That(SceneManager.GetActiveScene().name, Is.EqualTo("Menu"));
+            }
+            finally
+            {
+                GamePrefs.ServerUrl = previous;
+                Fodinha.Online.OnlineClient.Instance.Disconnect();
+            }
         }
     }
 }

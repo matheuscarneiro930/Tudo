@@ -21,8 +21,10 @@ namespace Fodinha.EditorTools
         public const string ScenesFolder = "Assets/Fodinha/Scenes";
         public const string OfflineScenePath = ScenesFolder + "/PartidaOffline.unity";
         public const string MenuScenePath = ScenesFolder + "/Menu.unity";
-        public const string MenuSceneName = "Menu";
-        public const string OfflineSceneName = "PartidaOffline";
+        public const string LobbyScenePath = ScenesFolder + "/Sala.unity";
+        public const string OnlineScenePath = ScenesFolder + "/PartidaOnline.unity";
+        public const string MenuSceneName = SceneNames.Menu;
+        public const string OfflineSceneName = SceneNames.OfflineMatch;
         public static readonly Vector2 ReferenceResolution = new Vector2(1080f, 1920f);
 
         [MenuItem("Fodinha/Montar cenas")]
@@ -32,6 +34,8 @@ namespace Fodinha.EditorTools
             Directory.CreateDirectory(ScenesFolder);
             BuildMenuScene();
             BuildOfflineScene();
+            BuildLobbyScene();
+            BuildOnlineMatchScene();
             UpdateBuildSettings();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -79,6 +83,32 @@ namespace Fodinha.EditorTools
             EditorUtility.SetDirty(root);
 
             EditorSceneManager.SaveScene(scene, MenuScenePath);
+        }
+
+        public static void BuildLobbyScene()
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            CreateCamera();
+            CreateEventSystem();
+            var canvas = CreateCanvas("Canvas");
+            var screen = UiKit.Rect("TelaSala", canvas.transform).Fill().gameObject.AddComponent<Fodinha.Online.LobbyScreen>();
+            var root = new GameObject("Sala").AddComponent<Fodinha.Online.LobbyRoot>();
+            root.Configure(screen);
+            EditorUtility.SetDirty(root);
+            EditorSceneManager.SaveScene(scene, LobbyScenePath);
+        }
+
+        public static void BuildOnlineMatchScene()
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            CreateCamera();
+            CreateEventSystem();
+            var canvas = CreateCanvas("Canvas");
+            var screen = UiKit.Rect("TelaPartida", canvas.transform).Fill().gameObject.AddComponent<MatchScreen>();
+            var root = new GameObject("PartidaOnline").AddComponent<Fodinha.Online.OnlineGameRoot>();
+            root.Configure(screen);
+            EditorUtility.SetDirty(root);
+            EditorSceneManager.SaveScene(scene, OnlineScenePath);
         }
 
         public static Camera CreateCamera()
@@ -133,6 +163,8 @@ namespace Fodinha.EditorTools
         {
             yield return MenuScenePath;
             yield return OfflineScenePath;
+            yield return LobbyScenePath;
+            yield return OnlineScenePath;
         }
     }
 }

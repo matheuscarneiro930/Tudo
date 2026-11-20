@@ -36,32 +36,8 @@ namespace Fodinha.Game
         public List<string> BuildSeatNames()
         {
             var names = new List<string> { string.IsNullOrWhiteSpace(PlayerName) ? "Você" : PlayerName.Trim() };
-            names.AddRange(BotNames.Pick(ClampedBots, Seed));
+            names.AddRange(Fodinha.Hosting.BotNames.Pick(ClampedBots, Seed));
             return names;
-        }
-    }
-
-    public static class BotNames
-    {
-        private static readonly string[] Pool =
-        {
-            "Zé", "Tonho", "Dona Cida", "Juca", "Bia", "Chico", "Lurdinha", "Nego", "Tião",
-            "Rosinha", "Dito", "Neide", "Bené", "Quinzinho", "Tereza", "Biu", "Dadá", "Lelé"
-        };
-
-        public static List<string> Pick(int count, int seed)
-        {
-            var rng = seed == 0 ? new Random() : new Random(seed);
-            var pool = new List<string>(Pool);
-            var result = new List<string>(count);
-            for (int i = 0; i < count; i++)
-            {
-                if (pool.Count == 0) { result.Add("Bot " + (i + 1)); continue; }
-                int j = rng.Next(pool.Count);
-                result.Add(pool[j]);
-                pool.RemoveAt(j);
-            }
-            return result;
         }
     }
 }

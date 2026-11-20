@@ -49,6 +49,11 @@ crashlytics-build.properties
 /Tools/**/bin/
 /Tools/**/obj/
 
+# ---- Servidor (.NET)
+!/Server/**/*.csproj
+/Server/**/bin/
+/Server/**/obj/
+
 # ---- Sistema
 .DS_Store
 Thumbs.db

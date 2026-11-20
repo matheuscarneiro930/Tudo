@@ -1,0 +1,9 @@
+Library/
+Temp/
+Logs/
+Builds/
+UserSettings/
+**/bin/
+**/obj/
+.git/
+*.apk

@@ -19,6 +19,11 @@ Você está recebendo o projeto **Fodinha Online** (Unity 6000.4.7f1 + C#, celul
   pedidos online vão para `MenuRoot.OnlineHandler : IOnlineMenuHandler`, ainda não implementado), `RulesEditor`,
   `GamePrefs` (nome, som, vibração, últimas regras), `RoomCode`/`RoomOptions`/`RoomListing` (Hosting).
   184 EditMode + 3 PlayMode passando.
+- Etapa 4 ✅ (falta hospedar): o dono escolheu **servidor .NET próprio** (não Photon). `Server/Fodinha.Server` (ServerCore,
+  GameHost, WebSocket /ws), protocolo em `Assets/Fodinha/Scripts/Net`, cliente em `Assets/Fodinha/Scripts/Online`,
+  cenas `Sala` e `PartidaOnline`. Testes: 136 dotnet (núcleo+host), 26 do servidor (inclui WebSocket real),
+  197 EditMode, 4 PlayMode (inclui ponta a ponta subindo o servidor). Hospedagem planejada: Render (render.yaml, plano free).
+  `GamePrefs.DefaultServerUrl` deve apontar para o endereço público quando o servidor estiver no ar.
 
 ## Ferramentas
 - `Tools/run-unity-tests.ps1 [-Platform PlayMode]` — testes no Unity (feche o Editor antes).

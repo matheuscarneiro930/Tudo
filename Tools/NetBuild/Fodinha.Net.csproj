@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compila o protocolo de rede (Assets/Fodinha/Scripts/Net) FORA da Unity, com as mesmas restrições da Unity 6.
+       Usado pelo servidor e pelos testes. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AssemblyName>Fodinha.Net</AssemblyName>
+    <RootNamespace>Fodinha.Net</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Fodinha/Scripts/Net/**/*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../CoreBuild/Fodinha.Core.csproj" />
+    <ProjectReference Include="../HostingBuild/Fodinha.Hosting.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+</Project>

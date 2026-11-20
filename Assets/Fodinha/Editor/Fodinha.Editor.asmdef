@@ -5,6 +5,8 @@
         "Fodinha.Core",
         "Fodinha.Hosting",
         "Fodinha.Game",
+        "Fodinha.Net",
+        "Fodinha.Online",
         "UnityEngine.UI"
     ],
     "includePlatforms": [

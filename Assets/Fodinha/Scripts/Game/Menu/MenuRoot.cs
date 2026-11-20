@@ -21,12 +21,20 @@ namespace Fodinha.Game.Menu
         /// <summary>Quem trata criar/entrar/listar salas. Registrado pela camada online.</summary>
         public static IOnlineMenuHandler OnlineHandler;
 
+        /// <summary>Aviso para mostrar quando o menu abrir (ex.: "a sala foi encerrada").</summary>
+        public static string PendingToast;
+
         public MenuScreen Screen => screen;
 
         private void Awake()
         {
             Application.targetFrameRate = 60;
             if (screen == null) screen = FindAnyObjectByType<MenuScreen>();
+            if (!string.IsNullOrEmpty(PendingToast))
+            {
+                screen.ShowToast(PendingToast, 4f);
+                PendingToast = null;
+            }
 
             screen.OfflineRequested += StartOffline;
             screen.CreateRoomRequested += options => WithOnline(h => h.CreateRoom(screen, options));
