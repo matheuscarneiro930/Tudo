@@ -27,6 +27,10 @@ namespace Fodinha.Game.UI
         public RectTransform Rect { get; private set; }
         public int Seat { get; private set; } = -1;
 
+        private int lastBet = PlayerState.NoBet;
+        private int lastTricks;
+        private int lastLives = -1;
+
         public static SeatView Create(Transform parent)
         {
             var rt = UiKit.Rect("Assento", parent);
@@ -46,6 +50,7 @@ namespace Fodinha.Game.UI
             glow.rectTransform.Fill();
             glow.rectTransform.offsetMin = new Vector2(-50f, -50f);
             glow.rectTransform.offsetMax = new Vector2(50f, 50f);
+            glow.gameObject.AddComponent<Pulse>();
 
             panel = UiKit.Image("Painel", rt, Palette.Panel, SpriteFactory.RoundedRect, 1.6f);
             panel.rectTransform.Fill();
@@ -84,6 +89,13 @@ namespace Fodinha.Game.UI
 
         public void Render(PlayerView p, MatchView view, bool isTurn)
         {
+            if (Seat != p.Seat)
+            {
+                // Widget reaproveitado para outro jogador: não anima a "mudança".
+                lastBet = p.Bet;
+                lastTricks = p.TricksWon;
+                lastLives = p.Lives;
+            }
             Seat = p.Seat;
             int startingLives = view.Rules != null ? view.Rules.StartingLives : 3;
 
@@ -109,6 +121,14 @@ namespace Fodinha.Game.UI
             livesText.text = UiKit.Hearts(p.Lives, Mathf.Max(startingLives, p.Lives));
             betText.text = BetLine(p);
             betText.color = Palette.Text;
+
+            // Animações: aposta feita "pula"; vaza ganha também.
+            if (p.HasBet && lastBet != p.Bet) Tweens.Scale(betText.rectTransform, new Vector3(1.35f, 1.35f, 1f), Vector3.one, 0.35f);
+            else if (p.HasBet && p.TricksWon > lastTricks) Tweens.Scale(betText.rectTransform, new Vector3(1.25f, 1.25f, 1f), Vector3.one, 0.3f);
+            if (p.Lives < lastLives && lastLives >= 0) Tweens.Scale(livesText.rectTransform, new Vector3(1.5f, 1.5f, 1f), Vector3.one, 0.45f);
+            lastBet = p.Bet;
+            lastTricks = p.TricksWon;
+            lastLives = p.Lives;
 
             if (p.VisibleCards.Count > 0)
             {

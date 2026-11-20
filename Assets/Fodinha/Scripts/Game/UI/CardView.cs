@@ -53,20 +53,20 @@ namespace Fodinha.Game.UI
             body = UiKit.Image("Frente", rt, Palette.CardFace, SpriteFactory.RoundedRect, 2.5f);
             body.rectTransform.Fill();
 
-            cornerRank = UiKit.Label("Valor", body.transform, "", 120, Palette.BlackSuit, TextAnchor.UpperLeft, FontStyle.Bold, true);
+            cornerRank = UiKit.Label("Valor", body.transform, "", 420, Palette.BlackSuit, TextAnchor.UpperLeft, FontStyle.Bold, true);
             cornerRank.rectTransform.Anchor(0.07f, 0.66f, 0.6f, 0.97f);
-            cornerSuit = UiKit.Label("NaipeCanto", body.transform, "", 120, Palette.BlackSuit, TextAnchor.UpperLeft, FontStyle.Normal, true);
+            cornerSuit = UiKit.Label("NaipeCanto", body.transform, "", 420, Palette.BlackSuit, TextAnchor.UpperLeft, FontStyle.Normal, true);
             cornerSuit.rectTransform.Anchor(0.08f, 0.47f, 0.45f, 0.68f);
-            centerSuit = UiKit.Label("NaipeCentro", body.transform, "", 300, Palette.BlackSuit, TextAnchor.MiddleCenter, FontStyle.Normal, true);
+            centerSuit = UiKit.Label("NaipeCentro", body.transform, "", 900, Palette.BlackSuit, TextAnchor.MiddleCenter, FontStyle.Normal, true);
             centerSuit.rectTransform.Anchor(0.25f, 0.08f, 0.95f, 0.62f);
-            bottomRank = UiKit.Label("ValorBaixo", body.transform, "", 100, Palette.BlackSuit, TextAnchor.LowerRight, FontStyle.Bold, true);
+            bottomRank = UiKit.Label("ValorBaixo", body.transform, "", 330, Palette.BlackSuit, TextAnchor.LowerRight, FontStyle.Bold, true);
             bottomRank.rectTransform.Anchor(0.5f, 0.03f, 0.93f, 0.25f);
 
             backImage = UiKit.Image("Verso", rt, Color.white, SpriteFactory.CardBack);
             backImage.rectTransform.Fill();
             backImage.preserveAspect = false;
 
-            question = UiKit.Label("Interrogacao", backImage.transform, "?", 200, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold, true);
+            question = UiKit.Label("Interrogacao", backImage.transform, "?", 600, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold, true);
             question.rectTransform.Anchor(0.1f, 0.15f, 0.9f, 0.85f);
             var qOutline = question.gameObject.AddComponent<Outline>();
             qOutline.effectColor = new Color(0f, 0f, 0f, 0.6f);

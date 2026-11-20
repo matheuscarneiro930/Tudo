@@ -130,13 +130,13 @@ namespace Fodinha.EditorTools
         }
 
         /// <summary>Monta um Canvas que desenha numa textura, deixa <paramref name="build"/> preencher e salva o PNG.</summary>
-        private static void RenderToPng(string path, int width, int height, Action<RectTransform> build)
+        public static void RenderToPng(string path, int width, int height, Action<RectTransform> build, bool transparent = false)
         {
             var rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
             var camGo = new GameObject("CameraCaptura");
             var cam = camGo.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = Color.black;
+            cam.backgroundColor = transparent ? new Color(0f, 0f, 0f, 0f) : Color.black;
             cam.orthographic = true;
             cam.targetTexture = rt;
             var canvasGo = new GameObject("CanvasCaptura", typeof(RectTransform));
@@ -155,14 +155,14 @@ namespace Fodinha.EditorTools
                     UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)lg.transform);
                 Canvas.ForceUpdateCanvases();
                 cam.Render();
-                var prev = RenderTexture.active;
+                var prevActive = RenderTexture.active;
                 RenderTexture.active = rt;
-                var tex = new Texture2D(width, height, TextureFormat.RGB24, false);
-                tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-                tex.Apply();
-                RenderTexture.active = prev;
-                File.WriteAllBytes(path, tex.EncodeToPNG());
-                UnityEngine.Object.DestroyImmediate(tex);
+                var image = new Texture2D(width, height, transparent ? TextureFormat.RGBA32 : TextureFormat.RGB24, false);
+                image.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+                image.Apply();
+                RenderTexture.active = prevActive;
+                File.WriteAllBytes(path, image.EncodeToPNG());
+                UnityEngine.Object.DestroyImmediate(image);
             }
             finally
             {

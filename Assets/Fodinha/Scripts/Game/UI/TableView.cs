@@ -21,6 +21,14 @@ namespace Fodinha.Game.UI
         private readonly List<CardView> trickCards = new List<CardView>();
         private readonly Dictionary<int, Vector2> directionBySeat = new Dictionary<int, Vector2>();
 
+        // Estado anterior, só para animar transições (puramente visual).
+        private int shownTrickKey = -1;
+        private readonly HashSet<int> shownTrickSeats = new HashSet<int>();
+        private TrickResult shownResult;
+        private int shownResultKey = -1;
+        private Vector2 shownCardSize;
+        private readonly List<CardView> flyingCards = new List<CardView>();
+
         public IReadOnlyList<SeatView> Seats => seats;
 
         public static TableView Create(Transform parent)
@@ -103,6 +111,24 @@ namespace Fodinha.Game.UI
 
             float cardH = TableLayout.TrickCardHeight(n);
             var cardSize = new Vector2(cardH * CardView.Aspect, cardH);
+
+            int trickKey = view.RoundNumber * 1000 + view.TrickNumber;
+
+            // Fim da vaza mostrada: as cartas voam para quem levou. (Compara por rodada/vaza: no online cada
+            // atualização traz objetos novos.)
+            int resultKey = result != null ? trickKey : -1;
+            if (shownResult != null && resultKey != shownResultKey) FlyTrickToWinner(shownResult, shownCardSize);
+            bool resultIsNew = result != null && resultKey != shownResultKey;
+            shownResult = result;
+            shownResultKey = resultKey;
+            shownCardSize = cardSize;
+
+            if (trickKey != shownTrickKey)
+            {
+                shownTrickKey = trickKey;
+                shownTrickSeats.Clear();
+            }
+            var tableSize = rect.rect.size;
             while (trickCards.Count < plays.Count)
             {
                 var c = CardView.Create(trickLayer, "Jogada" + trickCards.Count);
@@ -122,16 +148,39 @@ namespace Fodinha.Game.UI
                 var play = plays[i];
                 cv.gameObject.SetActive(true);
                 var dir = directionBySeat.TryGetValue(play.Seat, out var d) ? d : Vector2.zero;
-                cv.Rect.Place(TableLayout.TrickAnchor(dir), cardSize);
-                cv.Rect.localScale = Vector3.one;
+                if (Tweens.IsAnimating(cv.Rect))
+                {
+                    // Não interrompe a animação em andamento: só garante âncora e tamanho.
+                    cv.Rect.anchorMin = cv.Rect.anchorMax = TableLayout.TrickAnchor(dir);
+                    cv.Rect.sizeDelta = cardSize;
+                }
+                else
+                {
+                    cv.Rect.Place(TableLayout.TrickAnchor(dir), cardSize);
+                    cv.Rect.localScale = Vector3.one;
+                }
                 cv.Rect.SetSiblingIndex(i);
                 cv.ShowFace(play.Card, view.Comparer != null && view.Comparer.IsManilha(play.Card));
+
+                // Carta nova na mesa: voa de quem jogou até o centro.
+                if (shownTrickSeats.Add(play.Seat) && tableSize.x > 1f)
+                {
+                    var trickAnchor = TableLayout.TrickAnchor(dir);
+                    var fromAnchor = play.Seat == local ? new Vector2(0.5f, -0.25f) : TableLayout.SeatAnchor(dir);
+                    var from = Vector2.Scale(fromAnchor - trickAnchor, tableSize);
+                    Tweens.Move(cv.Rect, from, Vector2.zero, 0.28f, 0f, new Vector3(0.55f, 0.55f, 1f), Vector3.one);
+                }
 
                 bool winner = result != null && result.WinnerSeat == play.Seat;
                 bool canceled = result != null && Contains(result.CanceledSeats, play.Seat);
                 cv.SetHighlight(winner, Palette.Accent);
                 cv.SetDimmed(result != null && !winner);
-                if (winner) cv.Rect.localScale = new Vector3(1.12f, 1.12f, 1f);
+                if (winner)
+                {
+                    var big = new Vector3(1.12f, 1.12f, 1f);
+                    if (resultIsNew) Tweens.Scale(cv.Rect, new Vector3(1.35f, 1.35f, 1f), big, 0.35f);
+                    else if (!Tweens.IsAnimating(cv.Rect)) cv.Rect.localScale = big;
+                }
                 if (canceled) cv.SetDimmed(true);
             }
             if (result != null)
@@ -165,6 +214,45 @@ namespace Fodinha.Game.UI
             centerInfo.gameObject.SetActive(showInfo);
             if (showInfo)
                 centerInfo.text = view.Phase == MatchPhase.Betting ? "APOSTAS" : "VAZA " + view.TrickNumber + " DE " + view.CardsThisRound;
+        }
+
+        /// <summary>Cópias das cartas da vaza encerrada voam até quem levou (ou somem no centro, se ninguém levou).</summary>
+        private void FlyTrickToWinner(TrickResult trick, Vector2 cardSize)
+        {
+            if (!Tweens.Enabled) return;
+            var tableSize = rect.rect.size;
+            Vector2 target = trick.HasWinner && directionBySeat.TryGetValue(trick.WinnerSeat, out var wd)
+                ? (wd == TableLayout.LocalDirection ? new Vector2(0.5f, -0.2f) : TableLayout.SeatAnchor(wd))
+                : new Vector2(0.5f, 0.5f);
+
+            for (int i = 0; i < trick.Plays.Count; i++)
+            {
+                var play = trick.Plays[i];
+                var ghost = FlyingCard(i);
+                var dir = directionBySeat.TryGetValue(play.Seat, out var d) ? d : Vector2.zero;
+                var anchor = TableLayout.TrickAnchor(dir);
+                ghost.Rect.Place(anchor, cardSize);
+                ghost.ShowFace(play.Card, false);
+                ghost.SetHighlight(false);
+                ghost.SetDimmed(false);
+                ghost.gameObject.SetActive(true);
+                var go = ghost.gameObject;
+                Tweens.Move(ghost.Rect, Vector2.zero, Vector2.Scale(target - anchor, tableSize), 0.4f, i * 0.02f,
+                            Vector3.one, new Vector3(0.35f, 0.35f, 1f), () => go.SetActive(false));
+            }
+        }
+
+        private CardView FlyingCard(int index)
+        {
+            while (flyingCards.Count <= index)
+            {
+                var c = CardView.Create(trickLayer, "Recolhendo" + flyingCards.Count);
+                c.SetInteractable(false);
+                c.gameObject.SetActive(false);
+                flyingCards.Add(c);
+            }
+            flyingCards[index].Rect.SetAsLastSibling();
+            return flyingCards[index];
         }
 
         /// <summary>Atualiza o relógio do adversário da vez (chamado a cada quadro).</summary>

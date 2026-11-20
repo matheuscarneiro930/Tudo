@@ -80,6 +80,7 @@ namespace Fodinha.Game.UI
             if (session == null) return;
             session.ViewChanged += Render;
             session.ActionRejected += OnActionRejected;
+            session.EventReceived += OnMatchEvent;
             if (session.View != null) Render(session.View);
         }
 
@@ -88,7 +89,48 @@ namespace Fodinha.Game.UI
             if (session == null) return;
             session.ViewChanged -= Render;
             session.ActionRejected -= OnActionRejected;
+            session.EventReceived -= OnMatchEvent;
             session = null;
+        }
+
+        /// <summary>Sons e vibração a partir dos eventos públicos da partida.</summary>
+        private void OnMatchEvent(MatchEvent e)
+        {
+            int me = session != null ? session.LocalSeat : -1;
+            switch (e.Type)
+            {
+                case MatchEventType.CardsDealt:
+                    if (Application.isPlaying && isActiveAndEnabled) StartCoroutine(DealSounds(Mathf.Clamp(e.Value * 2, 2, 8)));
+                    break;
+                case MatchEventType.CardPlayed:
+                    Audio.Sfx.Play(Audio.Sound.CardOnTable);
+                    break;
+                case MatchEventType.TurnChanged:
+                    if (e.Seat == me && me >= 0 && (session.View == null || !session.View.Players[me].IsAutoPlay))
+                    {
+                        Audio.Sfx.Play(Audio.Sound.YourTurn);
+                        Audio.Sfx.Vibrate();
+                    }
+                    break;
+                case MatchEventType.TrickResolved:
+                    if (e.Seat == me && me >= 0) Audio.Sfx.Play(Audio.Sound.TrickWon);
+                    break;
+                case MatchEventType.LifeLost:
+                    if (e.Seat == me && me >= 0) Audio.Sfx.Play(Audio.Sound.LifeLost);
+                    break;
+                case MatchEventType.MatchEnded:
+                    if (me >= 0) Audio.Sfx.Play(e.Seat == me ? Audio.Sound.Victory : Audio.Sound.Defeat);
+                    break;
+            }
+        }
+
+        private static System.Collections.IEnumerator DealSounds(int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                Audio.Sfx.Play(Audio.Sound.Card, 0.8f);
+                yield return new WaitForSecondsRealtime(0.06f);
+            }
         }
 
         /// <summary>Texto do botão principal da tela de fim (offline: "Jogar de novo"; online: "Voltar à sala").</summary>
@@ -342,6 +384,7 @@ namespace Fodinha.Game.UI
 
         private void OnActionRejected(ActionResult result)
         {
+            Audio.Sfx.Play(Audio.Sound.Error);
             ShowToast(Describe(result));
         }
 

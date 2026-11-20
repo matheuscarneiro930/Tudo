@@ -93,8 +93,17 @@ namespace Fodinha.Game.UI
                 }
             }
 
+            // Rodada nova com cartas na mão: anima a distribuição.
+            int round = view != null ? view.RoundNumber : -1;
+            dealing = total > 0 && round != dealtRound;
+            if (total > 0) dealtRound = round;
+            if (dealing) placed.Clear();
             Layout();
+            dealing = false;
         }
+
+        /// <summary>Verdadeiro durante a animação de distribuição (som/vibração podem acompanhar).</summary>
+        public int DealtRound => dealtRound;
 
         private void EnsurePool(int count)
         {
@@ -127,10 +136,37 @@ namespace Fodinha.Game.UI
                 var card = pool[i];
                 bool isSelected = i < shown.Count && selected.HasValue && selected.Value == shown[i];
                 float y = -height * 0.5f + cardH * 0.5f + height * 0.06f + (isSelected ? raise : 0f);
-                card.Rect.Place(new Vector2(0.5f, 0.5f), new Vector2(cardW, cardH), new Vector2(x0 + spacing * i, y));
+                var target = new Vector2(x0 + spacing * i, y);
+                var size = new Vector2(cardW, cardH);
+                Vector2 old = card.Rect.anchoredPosition;
+                bool wasPlaced = placed.Contains(i);
+
+                if (dealing)
+                {
+                    // Distribuição: as cartas chegam da mesa, uma a uma.
+                    card.Rect.Place(new Vector2(0.5f, 0.5f), size, target);
+                    Tweens.Move(card.Rect, target + new Vector2(0f, height * 1.4f), target, 0.35f, i * 0.06f,
+                                new Vector3(0.45f, 0.45f, 1f), Vector3.one);
+                }
+                else if (wasPlaced && (old - target).sqrMagnitude > 1f)
+                {
+                    // Reajuste (carta jogada/selecionada): desliza até o novo lugar.
+                    card.Rect.Place(new Vector2(0.5f, 0.5f), size, target);
+                    Tweens.Move(card.Rect, old, target, 0.18f);
+                }
+                else if (!Tweens.IsAnimating(card.Rect))
+                {
+                    card.Rect.Place(new Vector2(0.5f, 0.5f), size, target);
+                }
                 card.Rect.SetSiblingIndex(i);
+                placed.Add(i);
             }
+            for (int i = n; i < pool.Count; i++) placed.Remove(i);
         }
+
+        private readonly HashSet<int> placed = new HashSet<int>();
+        private int dealtRound = -1;
+        private bool dealing;
 
         private void OnRectTransformDimensionsChange()
         {
@@ -148,6 +184,7 @@ namespace Fodinha.Game.UI
                 return;
             }
             selected = c;
+            Audio.Sfx.Play(Audio.Sound.Card, 0.5f);
             Render(lastView);
         }
 

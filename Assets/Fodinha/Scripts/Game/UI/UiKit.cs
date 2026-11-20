@@ -148,6 +148,7 @@ namespace Fodinha.Game.UI
             text.rectTransform.offsetMin = new Vector2(8f, 4f);
             text.rectTransform.offsetMax = new Vector2(-8f, -4f);
 
+            button.onClick.AddListener(() => Audio.Sfx.Play(Audio.Sound.Click, 0.6f));
             if (onClick != null) button.onClick.AddListener(() => onClick());
             return button;
         }
