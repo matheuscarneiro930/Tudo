@@ -3,6 +3,23 @@
 Este documento descreve **exatamente** o que o código em `Assets/Fodinha/Scripts/Core` faz.
 Tudo que estiver marcado como *configurável* está em `RuleSet.cs`. Valor padrão entre parênteses.
 
+## Regras oficiais (definidas pelo dono do jogo)
+
+O app (offline) e o servidor usam **sempre** `RuleSet.WithOfficialRules()`:
+
+| Regra | Sempre |
+|---|---|
+| Manilha | **Vira** (o valor seguinte à carta virada) |
+| Empate | **Naipe desempata** (Paus > Copas > Espadas > Ouros) |
+| Pé | **Não pode apostar o número que fecha a soma.** Ex.: 3 cartas, 4 jogadores, os três primeiros apostam 1 cada (soma 3): o pé não pode dizer 0 e é obrigado a apostar 1 ou mais. |
+| Errou a aposta | **Perde 1 vida** |
+| Cartas por rodada | **+1 por rodada** até o máximo que o baralho permite; depois mantém |
+| Rodada cega | **A 1ª rodada (1 carta) é cega** |
+
+Configuráveis no jogo: vidas, tempo de jogada, teto de cartas, tempos esgotados até o bot assumir,
+número de bots (offline) / máximo de jogadores (sala). As outras opções abaixo continuam no motor
+(e nos testes) para futuros modos de jogo, mas não aparecem no app.
+
 ## Baralho e força das cartas
 
 - 40 cartas: 4 5 6 7 Q J K A 2 3 em Paus, Copas, Espadas e Ouros.
@@ -54,7 +71,7 @@ A informação é filtrada no servidor: o cliente nunca recebe a própria carta 
 
 ## Vazas e empates
 
-- Vence a carta mais forte. *Configurável — `TieRule` (CancelOut):*
+- Vence a carta mais forte. *Configurável — `TieRule` (SuitBreaksTie — regra oficial):*
   - **CancelOut**: cartas empatadas se anulam; vence a maior das restantes; se todas se anularem, ninguém leva.
   - **NoWinner**: se as maiores empatarem, ninguém leva.
   - **FirstPlayedWins**: entre as maiores empatadas, vence quem jogou primeiro.

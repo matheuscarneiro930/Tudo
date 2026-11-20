@@ -14,20 +14,13 @@ namespace Fodinha.Game.UI
 
         private static readonly int[] TurnTimes = { 20, 25, 30, 35, 40, 45, 50, 55, 60 };
         private static readonly int[] CardCaps = { 0, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-        private static readonly string[] YesNo = { "Não", "Sim" };
 
         private Mode mode;
         private OptionStepper players;
         private OptionStepper visibility;
         private OptionStepper lives;
         private OptionStepper turnTime;
-        private OptionStepper manilha;
-        private OptionStepper tie;
-        private OptionStepper lastBidder;
-        private OptionStepper lifeLoss;
-        private OptionStepper progression;
         private OptionStepper cardCap;
-        private OptionStepper blind;
         private OptionStepper timeouts;
 
         public Mode EditorMode => mode;
@@ -55,16 +48,24 @@ namespace Fodinha.Game.UI
 
             lives = OptionStepper.Create(content, "Vidas", Range(RuleSet.MinLives, RuleSet.MaxLives, ""), 1);
             turnTime = OptionStepper.Create(content, "Tempo de jogada", Map(TurnTimes, v => v + " s"), 2);
-            manilha = OptionStepper.Create(content, "Manilha", new[] { "Vira", "Fixas" }, 0);
-            tie = OptionStepper.Create(content, "Empate", new[] { "Se anulam", "Ninguém leva", "1º a jogar leva", "Naipe desempata" }, 0);
-            lastBidder = OptionStepper.Create(content, "Pé não fecha a soma", YesNo, 1);
-            lifeLoss = OptionStepper.Create(content, "Errou a aposta", new[] { "Perde 1 vida", "Perde a diferença" }, 0);
-            progression = OptionStepper.Create(content, "Cartas por rodada", new[] { "Sobe e mantém", "Sobe e desce" }, 0);
             cardCap = OptionStepper.Create(content, "Máx. de cartas", Map(CardCaps, v => v == 0 ? "Sem limite" : v.ToString()), 0);
-            blind = OptionStepper.Create(content, "Rodada cega (1 carta)", YesNo, 1);
             timeouts = OptionStepper.Create(content, "Tempo esgotado: bot assume após",
                                             new[] { "1 vez", "2 vezes", "3 vezes", "4 vezes", "5 vezes" }, 1);
+
+            // As demais regras são fixas (regras oficiais): só informa.
+            var info = UiKit.Label("RegrasOficiais", content, OfficialRulesText, 30, Palette.TextMuted, TextAnchor.UpperLeft);
+            UiControls.SetHeight(info, 300f);
         }
+
+        /// <summary>Texto com as regras fixas do jogo.</summary>
+        public const string OfficialRulesText =
+            "<b>Regras oficiais (sempre valem):</b>\n" +
+            "• Manilha pela vira (o valor seguinte à carta virada)\n" +
+            "• Empate: o naipe desempata (♣ > ♥ > ♠ > ♦)\n" +
+            "• O pé não pode apostar o número que fecha a soma\n" +
+            "• Errou a aposta: perde 1 vida\n" +
+            "• Cada rodada tem 1 carta a mais, até o baralho permitir\n" +
+            "• A 1ª rodada (1 carta) é cega";
 
         // ------------------------------------------------------------------ leitura/escrita
 
@@ -80,31 +81,20 @@ namespace Fodinha.Game.UI
 
             lives.SetIndex(rules.StartingLives - RuleSet.MinLives);
             turnTime.SetIndex(IndexOf(TurnTimes, rules.TurnTimeSeconds, 2));
-            manilha.SetIndex((int)rules.ManilhaMode);
-            tie.SetIndex((int)rules.TieRule);
-            lastBidder.SetIndex(rules.LastBidderRestriction ? 1 : 0);
-            lifeLoss.SetIndex((int)rules.LifeLossMode);
-            progression.SetIndex((int)rules.Progression);
             cardCap.SetIndex(IndexOf(CardCaps, rules.MaxCardsPerPlayer, 0));
-            blind.SetIndex(rules.BlindOneCardRounds ? 1 : 0);
             timeouts.SetIndex(rules.TimeoutsBeforeAutoPlay - 1);
         }
 
+        /// <summary>Regras escolhidas + regras oficiais fixas.</summary>
         public RuleSet BuildRules()
         {
             return new RuleSet
             {
                 StartingLives = RuleSet.MinLives + lives.Index,
                 TurnTimeSeconds = TurnTimes[turnTime.Index],
-                ManilhaMode = (ManilhaMode)manilha.Index,
-                TieRule = (TieRule)tie.Index,
-                LastBidderRestriction = lastBidder.Index == 1,
-                LifeLossMode = (LifeLossMode)lifeLoss.Index,
-                Progression = (CardProgression)progression.Index,
                 MaxCardsPerPlayer = CardCaps[cardCap.Index],
-                BlindOneCardRounds = blind.Index == 1,
                 TimeoutsBeforeAutoPlay = 1 + timeouts.Index
-            };
+            }.WithOfficialRules();
         }
 
         /// <summary>Offline: número de bots. Sala: máximo de jogadores.</summary>

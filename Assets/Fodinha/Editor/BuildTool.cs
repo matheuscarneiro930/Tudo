@@ -37,6 +37,56 @@ namespace Fodinha.EditorTools
             Report(report);
         }
 
+        public const string AndroidOutput = "Builds/Android/FodinhaOnline.apk";
+        public const string Version = "0.1.0";
+        public const int VersionCode = 1;
+
+        /// <summary>
+        /// APK para instalar direto no celular (assinado com a chave de depuração; para a Play Store será preciso
+        /// uma chave própria e o formato .aab).
+        ///   -executeMethod Fodinha.EditorTools.BuildTool.BuildAndroid
+        /// </summary>
+        [MenuItem("Fodinha/Gerar APK Android")]
+        public static void BuildAndroid()
+        {
+            ProjectConfigurator.Apply();
+            SceneBuilder.UpdateBuildSettings();
+
+            if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
+                EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);
+
+            // Usa as ferramentas Android instaladas junto com o Unity (módulos do Hub).
+            string androidPlayer = Path.Combine(EditorApplication.applicationContentsPath, "PlaybackEngines", "AndroidPlayer");
+            string jdk = Path.Combine(androidPlayer, "OpenJDK");
+            if (Directory.Exists(jdk)) UnityEditor.Android.AndroidExternalToolsSettings.jdkRootPath = jdk;
+            string sdk = Path.Combine(androidPlayer, "SDK");
+            if (Directory.Exists(sdk)) UnityEditor.Android.AndroidExternalToolsSettings.sdkRootPath = sdk;
+            string ndk = Path.Combine(androidPlayer, "NDK");
+            if (Directory.Exists(ndk)) UnityEditor.Android.AndroidExternalToolsSettings.ndkRootPath = ndk;
+
+            var android = UnityEditor.Build.NamedBuildTarget.Android;
+            PlayerSettings.bundleVersion = Version;
+            PlayerSettings.Android.bundleVersionCode = VersionCode;
+            PlayerSettings.SetScriptingBackend(android, ScriptingImplementation.IL2CPP);
+            PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64 | AndroidArchitecture.ARMv7;
+            PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
+            PlayerSettings.Android.forceInternetPermission = true;
+            PlayerSettings.SetManagedStrippingLevel(android, ManagedStrippingLevel.Minimal);
+            EditorUserBuildSettings.buildAppBundle = false;
+
+            var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
+            string output = ArgValue("-buildOutput") ?? AndroidOutput;
+            Directory.CreateDirectory(Path.GetDirectoryName(output));
+            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            {
+                scenes = scenes,
+                locationPathName = output,
+                target = BuildTarget.Android,
+                options = BuildOptions.None
+            });
+            Report(report);
+        }
+
         /// <summary>Valor de um argumento da linha de comando (ex.: -buildOutput caminho).</summary>
         public static string ArgValue(string name)
         {

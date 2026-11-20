@@ -306,11 +306,11 @@ namespace Fodinha.Game.Menu
 
         private const string HowToPlayText =
             "<b><color=#FFC83D>Objetivo</color></b>\nSer o último jogador com vidas.\n\n" +
-            "<b><color=#FFC83D>Rodadas</color></b>\nA 1ª rodada tem 1 carta; cada rodada seguinte tem uma carta a mais, até o máximo que o baralho permite.\n\n" +
+            "<b><color=#FFC83D>Rodadas</color></b>\nA 1ª rodada tem 1 carta e é cega; cada rodada seguinte tem uma carta a mais, até o máximo que o baralho permite (depois mantém).\n\n" +
             "<b><color=#FFC83D>Apostas</color></b>\nDepois de ver as cartas, cada um diz quantas vazas vai fazer. O último a apostar (o pé) não pode deixar a soma das apostas igual ao número de cartas.\n\n" +
-            "<b><color=#FFC83D>Vazas</color></b>\nCada um joga uma carta; a mais forte leva. Força: 4 5 6 7 Q J K A 2 3. Cartas iguais se anulam.\n\n" +
+            "<b><color=#FFC83D>Vazas</color></b>\nCada um joga uma carta; a mais forte leva. Força: 4 5 6 7 Q J K A 2 3. Se duas cartas tiverem o mesmo valor, o naipe desempata: ♣ > ♥ > ♠ > ♦.\n\n" +
             "<b><color=#FFC83D>Manilha</color></b>\nA carta virada (vira) define a manilha: o valor seguinte. Manilha vence qualquer carta; entre manilhas vale o naipe: ♣ > ♥ > ♠ > ♦.\n\n" +
-            "<b><color=#FFC83D>Vidas</color></b>\nQuem faz exatamente o que apostou não perde nada. Quem erra perde vida. Sem vidas, está fora.\n\n" +
+            "<b><color=#FFC83D>Vidas</color></b>\nQuem faz exatamente o que apostou não perde nada. Quem erra perde 1 vida. Sem vidas, está fora.\n\n" +
             "<b><color=#FFC83D>Rodada cega</color></b>\nNa rodada de 1 carta você vê a carta dos outros, mas não a sua!\n\n" +
             "<b><color=#FFC83D>Tempo</color></b>\nSe o tempo acabar, o bot joga por você. Toque em \"Voltar a jogar\" para retomar.";
 

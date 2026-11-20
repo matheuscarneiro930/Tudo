@@ -71,7 +71,8 @@ namespace Fodinha.Core
 
         public ManilhaMode ManilhaMode = ManilhaMode.Vira;
 
-        public TieRule TieRule = TieRule.CancelOut;
+        /// <summary>Regra oficial: o naipe desempata (Paus &gt; Copas &gt; Espadas &gt; Ouros).</summary>
+        public TieRule TieRule = TieRule.SuitBreaksTie;
 
         /// <summary>
         /// Regra do "pé": quem aposta por último não pode fazer a soma das apostas
@@ -98,6 +99,28 @@ namespace Fodinha.Core
         public static RuleSet CreateDefault() => new RuleSet();
 
         public RuleSet Clone() => (RuleSet)MemberwiseClone();
+
+        /// <summary>
+        /// Regras oficiais do Fodinha Online (definidas pelo dono do jogo). O jogo (offline e servidor) usa SEMPRE
+        /// esta versão; só vidas, tempo de jogada, teto de cartas e tempos esgotados continuam configuráveis.
+        /// As outras variações seguem no motor apenas para testes e futuros modos de jogo.
+        /// </summary>
+        public RuleSet WithOfficialRules()
+        {
+            var r = Clone();
+            r.ManilhaMode = ManilhaMode.Vira;               // manilha pela vira
+            r.TieRule = TieRule.SuitBreaksTie;              // naipe desempata
+            r.LastBidderRestriction = true;                 // o pé não pode fechar a soma
+            r.LifeLossMode = LifeLossMode.OnePerMiss;       // errou: perde 1 vida
+            r.Progression = CardProgression.UpThenHold;     // +1 carta por rodada até o máximo, e mantém
+            r.BlindOneCardRounds = true;                    // a rodada de 1 carta é cega
+            return r;
+        }
+
+        /// <summary>Verdadeiro se as regras fixas são as oficiais.</summary>
+        public bool FollowsOfficialRules =>
+            ManilhaMode == ManilhaMode.Vira && TieRule == TieRule.SuitBreaksTie && LastBidderRestriction &&
+            LifeLossMode == LifeLossMode.OnePerMiss && Progression == CardProgression.UpThenHold && BlindOneCardRounds;
 
         /// <summary>Lista de problemas da configuração. Vazia = configuração válida.</summary>
         public List<string> GetValidationErrors()

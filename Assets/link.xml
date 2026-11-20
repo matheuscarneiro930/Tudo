@@ -1,0 +1,12 @@
+<!--
+  Impede que a otimização de tamanho do IL2CPP (managed stripping) remova classes usadas por reflexão:
+  as mensagens de rede são criadas pelo Newtonsoft.Json via reflexão.
+-->
+<linker>
+  <assembly fullname="Fodinha.Core" preserve="all" />
+  <assembly fullname="Fodinha.Hosting" preserve="all" />
+  <assembly fullname="Fodinha.Net" preserve="all" />
+  <assembly fullname="Fodinha.Game" preserve="all" />
+  <assembly fullname="Fodinha.Online" preserve="all" />
+  <assembly fullname="Newtonsoft.Json" preserve="all" />
+</linker>

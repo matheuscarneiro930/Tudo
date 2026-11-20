@@ -69,6 +69,7 @@ namespace Fodinha.Game
             if (director != null) director.EventRaised -= OnDirectorEvent;
 
             config = matchConfig.Clone();
+            config.Rules = config.Rules.WithOfficialRules(); // o jogo sempre usa as regras oficiais
             int seed = config.Seed != 0 ? config.Seed : Environment.TickCount;
             var engine = new MatchEngine(config.Rules, config.BuildSeatNames(), new SystemRandomSource(seed));
             director = new MatchDirector(engine, pacingOverride ?? pacing, new SystemRandomSource(unchecked(seed * 31 + 7)));

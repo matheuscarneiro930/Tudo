@@ -86,7 +86,9 @@ namespace Fodinha.Game.Tests
             menu.OfflineRules.Load(rules, 9);
             var back = menu.OfflineRules.BuildRules();
 
-            Assert.That(JsonUtility.ToJson(back), Is.EqualTo(JsonUtility.ToJson(rules)));
+            // O editor só muda o que é configurável; as regras fixas voltam sempre como as oficiais.
+            Assert.That(JsonUtility.ToJson(back), Is.EqualTo(JsonUtility.ToJson(rules.WithOfficialRules())));
+            Assert.That(back.FollowsOfficialRules, Is.True);
             Assert.That(menu.OfflineRules.PlayerOrBotCount, Is.EqualTo(9));
         }
 

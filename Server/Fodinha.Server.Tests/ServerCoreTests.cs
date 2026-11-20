@@ -96,6 +96,24 @@ namespace Fodinha.Server.Tests
         }
 
         [Test]
+        public void Sala_SempreUsaRegrasOficiais()
+        {
+            var c = Client("X");
+            var opts = new RoomOptions();
+            opts.Rules.TieRule = TieRule.CancelOut;
+            opts.Rules.LifeLossMode = LifeLossMode.Difference;
+            opts.Rules.BlindOneCardRounds = false;
+            opts.Rules.StartingLives = 4;
+            c.Create(opts);
+            Assert.That(c.Room.rules.FollowsOfficialRules, Is.True);
+            Assert.That(c.Room.rules.StartingLives, Is.EqualTo(4), "O que é configurável é mantido.");
+
+            opts.Rules.ManilhaMode = ManilhaMode.Fixed;
+            c.Do(Protocol.ToServer.UpdateOptions, new UpdateOptionsMsg { options = opts });
+            Assert.That(c.Room.rules.ManilhaMode, Is.EqualTo(ManilhaMode.Vira));
+        }
+
+        [Test]
         public void EntrarComCodigo_TodosVeemOsMembros()
         {
             var (owner, code) = OwnerWithRoom();

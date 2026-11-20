@@ -256,20 +256,15 @@ namespace Fodinha.Online
         public static string RulesSummary(RuleSet r)
         {
             if (r == null) return "";
+            // Só o que é configurável muda de sala para sala; o resto são as regras oficiais.
             var parts = new List<string>
             {
                 r.StartingLives + " vidas",
                 r.TurnTimeSeconds + " s por jogada",
-                r.ManilhaMode == ManilhaMode.Vira ? "manilha pela vira" : "manilhas fixas",
-                r.TieRule == TieRule.CancelOut ? "empate anula" : r.TieRule == TieRule.NoWinner ? "empate: ninguém leva"
-                    : r.TieRule == TieRule.FirstPlayedWins ? "empate: 1º leva" : "naipe desempata",
-                r.LastBidderRestriction ? "pé não fecha" : "pé livre",
-                r.LifeLossMode == LifeLossMode.OnePerMiss ? "erro = -1 vida" : "erro = -diferença",
-                r.BlindOneCardRounds ? "rodada cega" : "sem rodada cega"
+                r.MaxCardsPerPlayer > 0 ? "até " + r.MaxCardsPerPlayer + " cartas" : "cartas sem limite"
             };
-            if (r.MaxCardsPerPlayer > 0) parts.Add("até " + r.MaxCardsPerPlayer + " cartas");
-            if (r.Progression == CardProgression.UpAndDown) parts.Add("sobe e desce");
-            return string.Join(" · ", parts);
+            return string.Join(" · ", parts) +
+                   "\nRegras oficiais: manilha pela vira · naipe desempata · pé não fecha a soma · errou perde 1 vida · 1ª rodada cega";
         }
     }
 }

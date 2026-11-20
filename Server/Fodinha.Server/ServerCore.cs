@@ -238,7 +238,7 @@ namespace Fodinha.Server
 
         private void HandleCreateRoom(Player player, CreateRoomMsg msg)
         {
-            var opts = msg?.options;
+            var opts = OfficialOptions(msg?.options);
             if (opts == null || opts.Rules == null || opts.GetValidationErrors().Count > 0)
             {
                 player.SendError(ErrorCodes.InvalidOptions, "Configuração da sala inválida.");
@@ -309,7 +309,7 @@ namespace Fodinha.Server
         {
             var room = RequireOwnerInLobby(player);
             if (room == null) return;
-            var opts = msg?.options;
+            var opts = OfficialOptions(msg?.options);
             if (opts == null || opts.Rules == null || opts.GetValidationErrors().Count > 0 || opts.MaxPlayers < room.Members.Count)
             {
                 player.SendError(ErrorCodes.InvalidOptions, "Configuração inválida (o máximo não pode ser menor que os jogadores na sala).");
@@ -571,6 +571,15 @@ namespace Fodinha.Server
         }
 
         private string NewId(string prefix) => prefix + (++idCounter).ToString("x") + rng.Next(1 << 20).ToString("x");
+
+        /// <summary>Opções da sala com as regras oficiais forçadas (o app não consegue criar sala com outras regras).</summary>
+        private static RoomOptions OfficialOptions(RoomOptions options)
+        {
+            if (options?.Rules == null) return options;
+            var copy = options.Clone();
+            copy.Rules = copy.Rules.WithOfficialRules();
+            return copy;
+        }
 
         public static string SanitizeName(string name)
         {

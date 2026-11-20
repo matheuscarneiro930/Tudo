@@ -229,6 +229,7 @@ namespace Fodinha.Core.Tests
             var rules = RuleSet.CreateDefault();
             rules.StartingLives = 2;
             rules.LifeLossMode = LifeLossMode.Difference;
+            rules.TieRule = TieRule.CancelOut; // o baralho montado depende de cartas iguais se anularem
             var engine = NewEngine(2, rules);
             engine.StackedDecks.Enqueue(Stacked("4C", "3C", "7O"));
             engine.StackedDecks.Enqueue(Stacked("KC", "KE", "JC", "JE", "4O"));
@@ -264,6 +265,7 @@ namespace Fodinha.Core.Tests
         {
             var rules = RuleSet.CreateDefault();
             rules.StartingLives = 2;
+            rules.TieRule = TieRule.CancelOut; // o baralho montado depende de cartas iguais se anularem
             var engine = NewEngine(2, rules);
             engine.StackedDecks.Enqueue(Stacked("KC", "KE", "4O"));
             engine.StackedDecks.Enqueue(Stacked("KC", "KE", "JC", "JE", "4O"));
