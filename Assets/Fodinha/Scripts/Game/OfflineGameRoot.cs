@@ -1,19 +1,20 @@
 using Fodinha.Game.UI;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Fodinha.Game
 {
     /// <summary>
     /// Raiz da cena de partida offline: liga a tela (<see cref="MatchScreen"/>) ao <see cref="LocalMatchController"/>
-    /// e trata "jogar de novo" / "menu".
+    /// e trata "jogar de novo" / "voltar ao menu".
     /// </summary>
     public sealed class OfflineGameRoot : MonoBehaviour
     {
-        /// <summary>Nome da cena do menu principal (etapa 3). Vazio = sem menu.</summary>
-        public static string MenuSceneName = "";
-
         [SerializeField] private LocalMatchController controller;
         [SerializeField] private MatchScreen screen;
+
+        [Tooltip("Cena do menu principal. Vazio = sem botão de menu.")]
+        [SerializeField] private string menuScene = "Menu";
 
         public LocalMatchController Controller => controller;
         public MatchScreen Screen => screen;
@@ -28,15 +29,28 @@ namespace Fodinha.Game
 
             screen.Bind(controller);
             screen.PlayAgainRequested += controller.Restart;
-            if (!string.IsNullOrEmpty(MenuSceneName))
-                screen.MenuRequested += () => UnityEngine.SceneManagement.SceneManager.LoadScene(MenuSceneName);
+            if (!string.IsNullOrEmpty(menuScene) && Application.CanStreamedLevelBeLoaded(menuScene))
+                screen.MenuRequested += OnMenuRequested;
+        }
+
+        private void OnMenuRequested()
+        {
+            bool over = controller.View != null && controller.View.Phase == Core.MatchPhase.MatchOver;
+            if (over)
+            {
+                SceneManager.LoadScene(menuScene);
+                return;
+            }
+            UiControls.Confirm(screen.transform, "Sair da partida?", "A partida em andamento será perdida.",
+                               "Sair", () => SceneManager.LoadScene(menuScene), "Continuar");
         }
 
         /// <summary>Usado pelo construtor de cena no Editor para ligar as referências.</summary>
-        public void Configure(LocalMatchController matchController, MatchScreen matchScreen)
+        public void Configure(LocalMatchController matchController, MatchScreen matchScreen, string menuSceneName)
         {
             controller = matchController;
             screen = matchScreen;
+            menuScene = menuSceneName;
         }
     }
 }

@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Fodinha/Scenes/Menu.unity
+    guid: 3c15275d9c5e25849b75091a49116107
+  - enabled: 1
     path: Assets/Fodinha/Scenes/PartidaOffline.unity
     guid: 9896131db42259340b1dc5bd765a6351
   m_configObjects: {}

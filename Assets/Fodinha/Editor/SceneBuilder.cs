@@ -20,6 +20,9 @@ namespace Fodinha.EditorTools
     {
         public const string ScenesFolder = "Assets/Fodinha/Scenes";
         public const string OfflineScenePath = ScenesFolder + "/PartidaOffline.unity";
+        public const string MenuScenePath = ScenesFolder + "/Menu.unity";
+        public const string MenuSceneName = "Menu";
+        public const string OfflineSceneName = "PartidaOffline";
         public static readonly Vector2 ReferenceResolution = new Vector2(1080f, 1920f);
 
         [MenuItem("Fodinha/Montar cenas")]
@@ -27,6 +30,7 @@ namespace Fodinha.EditorTools
         {
             ProjectConfigurator.Apply();
             Directory.CreateDirectory(ScenesFolder);
+            BuildMenuScene();
             BuildOfflineScene();
             UpdateBuildSettings();
             AssetDatabase.SaveAssets();
@@ -48,7 +52,7 @@ namespace Fodinha.EditorTools
             var logic = new GameObject("PartidaOffline");
             var controller = logic.AddComponent<LocalMatchController>();
             var root = logic.AddComponent<OfflineGameRoot>();
-            root.Configure(controller, screen);
+            root.Configure(controller, screen, MenuSceneName);
 
             var so = new SerializedObject(screen);
             so.FindProperty("sessionSource").objectReferenceValue = controller;
@@ -56,6 +60,25 @@ namespace Fodinha.EditorTools
             EditorUtility.SetDirty(root);
 
             EditorSceneManager.SaveScene(scene, OfflineScenePath);
+        }
+
+        public static void BuildMenuScene()
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            CreateCamera();
+            CreateEventSystem();
+            var canvas = CreateCanvas("Canvas");
+
+            var screenRt = UiKit.Rect("TelaMenu", canvas.transform).Fill();
+            var screen = screenRt.gameObject.AddComponent<Fodinha.Game.Menu.MenuScreen>();
+
+            var logic = new GameObject("Menu");
+            var root = logic.AddComponent<Fodinha.Game.Menu.MenuRoot>();
+            root.Configure(screen, OfflineSceneName);
+            EditorUtility.SetDirty(root);
+
+            EditorSceneManager.SaveScene(scene, MenuScenePath);
         }
 
         public static Camera CreateCamera()
@@ -108,6 +131,7 @@ namespace Fodinha.EditorTools
         /// <summary>Cenas em ordem de build. As próximas etapas acrescentam suas cenas aqui.</summary>
         public static IEnumerable<string> ScenePathsInBuildOrder()
         {
+            yield return MenuScenePath;
             yield return OfflineScenePath;
         }
     }

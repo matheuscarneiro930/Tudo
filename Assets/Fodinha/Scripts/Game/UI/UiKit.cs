@@ -167,6 +167,14 @@ namespace Fodinha.Game.UI
 
         public static string Colored(string text, Color color) => "<color=#" + Palette.ToHex(color) + ">" + text + "</color>";
 
+        /// <summary>Destroy no jogo, DestroyImmediate no Editor parado (testes).</summary>
+        public static void SafeDestroy(UnityEngine.Object o)
+        {
+            if (o == null) return;
+            if (Application.isPlaying) UnityEngine.Object.Destroy(o);
+            else UnityEngine.Object.DestroyImmediate(o);
+        }
+
         public static void DestroyChildren(Transform t)
         {
             for (int i = t.childCount - 1; i >= 0; i--)

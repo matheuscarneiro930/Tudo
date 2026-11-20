@@ -79,10 +79,19 @@ O mesmo `MatchDirector` roda no modo offline e vai rodar no host da sala online.
 Editor (`Assets/Fodinha/Editor`): `SceneBuilder` monta as cenas, `ProjectConfigurator` aplica retrato/nome/identificador,
 `UiSnapshot` gera PNGs da tela em vários cenários, `MatchDriver` avança partidas em testes.
 
+## Menu (`Assets/Fodinha/Scripts/Game/Menu`) ✅
+
+| Arquivo | Responsabilidade |
+|---|---|
+| `MenuScreen.cs` | Páginas: início, jogar offline, criar sala, entrar com código, salas públicas, configurações, como jogar. Só coleta escolhas e dispara pedidos. |
+| `MenuRoot.cs` | Executa os pedidos: offline → `LocalMatchController.PendingConfig` + cena `PartidaOffline`; online → `IOnlineMenuHandler` (camada de rede). |
+| `UI/RulesEditor.cs`, `UI/UiControls.cs` | Formulário do `RuleSet`; seletor ‹ valor ›, campo de texto, lista com rolagem, diálogo de confirmação. |
+| `Settings/GamePrefs.cs` | Preferências no aparelho (nome, som, vibração, últimas regras/sala). |
+| `Hosting/RoomCode.cs`, `RoomListing.cs` | Código de sala (6 caracteres sem ambiguidade), opções da sala, item da lista pública. |
+
 ## Próximas camadas (a fazer)
 
-1. **Menu principal** (offline com nº de bots e regras, criar/entrar em sala, salas públicas, configurações).
-2. **Rede (modo Host)**: sessão com código, salas públicas/privadas, `NetworkMatch` no host chamando o `MatchEngine`,
+1. **Rede (modo Host)**: sessão com código, salas públicas/privadas, `NetworkMatch` no host chamando o `MatchEngine`,
    mão privada entregue só ao dono (objeto por jogador com *Object Interest = Explicit*, ou RPC direcionado).
 4. **Fusion 2 (modo Server)** antes das salas públicas: o mesmo núcleo roda no servidor dedicado (sem trapaça do host).
 5. Perfil/ranking, polimento, publicação.

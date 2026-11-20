@@ -15,6 +15,10 @@ Você está recebendo o projeto **Fodinha Online** (Unity 6000.4.7f1 + C#, celul
 - Etapa 2 ✅ partida offline contra bots: `MatchDirector` (Hosting), `LocalMatchController`, UI em retrato por código,
   cena `Assets/Fodinha/Scenes/PartidaOffline.unity` (gerada por `Fodinha.EditorTools.SceneBuilder.BuildAll`).
   164 testes EditMode + 1 PlayMode passando.
+- Etapa 3 ✅ menu principal (cena `Menu`, primeira da build): `MenuScreen` (páginas), `MenuRoot` (abre a partida offline;
+  pedidos online vão para `MenuRoot.OnlineHandler : IOnlineMenuHandler`, ainda não implementado), `RulesEditor`,
+  `GamePrefs` (nome, som, vibração, últimas regras), `RoomCode`/`RoomOptions`/`RoomListing` (Hosting).
+  184 EditMode + 3 PlayMode passando.
 
 ## Ferramentas
 - `Tools/run-unity-tests.ps1 [-Platform PlayMode]` — testes no Unity (feche o Editor antes).

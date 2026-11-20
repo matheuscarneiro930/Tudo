@@ -90,7 +90,87 @@ namespace Fodinha.EditorTools
                     Debug.LogError("[Fodinha] Falha na captura " + s.Name + ": " + e);
                 }
             }
+            try
+            {
+                CaptureMenu(folder, width, height);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("[Fodinha] Falha na captura do menu: " + e);
+            }
             Debug.Log("[Fodinha] Capturas salvas em " + folder);
+        }
+
+        private static void CaptureMenu(string folder, int width, int height)
+        {
+            var pages = new[]
+            {
+                Fodinha.Game.Menu.MenuScreen.Page.Home, Fodinha.Game.Menu.MenuScreen.Page.Offline,
+                Fodinha.Game.Menu.MenuScreen.Page.CreateRoom, Fodinha.Game.Menu.MenuScreen.Page.JoinRoom,
+                Fodinha.Game.Menu.MenuScreen.Page.PublicRooms, Fodinha.Game.Menu.MenuScreen.Page.Settings,
+                Fodinha.Game.Menu.MenuScreen.Page.HowToPlay
+            };
+            for (int i = 0; i < pages.Length; i++)
+            {
+                var page = pages[i];
+                RenderToPng(Path.Combine(folder, "menu_" + i + "_" + page + ".png"), width, height, root =>
+                {
+                    var menu = UiKit.Rect("Menu", root).Fill().gameObject.AddComponent<Fodinha.Game.Menu.MenuScreen>();
+                    menu.ShowPage(page);
+                    if (page == Fodinha.Game.Menu.MenuScreen.Page.JoinRoom) menu.CodeField.text = "k7m2q";
+                    if (page == Fodinha.Game.Menu.MenuScreen.Page.PublicRooms)
+                        menu.SetPublicRooms(new[]
+                        {
+                            new RoomListing { Code = "ABC234", HostName = "Bia", Players = 3, MaxPlayers = 8 },
+                            new RoomListing { Code = "XYZ789", HostName = "Zé", Players = 8, MaxPlayers = 8 },
+                            new RoomListing { Code = "QWE456", HostName = "Tião", Players = 4, MaxPlayers = 6, InProgress = true }
+                        });
+                });
+            }
+        }
+
+        /// <summary>Monta um Canvas que desenha numa textura, deixa <paramref name="build"/> preencher e salva o PNG.</summary>
+        private static void RenderToPng(string path, int width, int height, Action<RectTransform> build)
+        {
+            var rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
+            var camGo = new GameObject("CameraCaptura");
+            var cam = camGo.AddComponent<Camera>();
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = Color.black;
+            cam.orthographic = true;
+            cam.targetTexture = rt;
+            var canvasGo = new GameObject("CanvasCaptura", typeof(RectTransform));
+            canvasGo.layer = UiKit.UiLayer;
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = cam;
+            canvas.planeDistance = 5f;
+            canvas.scaleFactor = Mathf.Min(width / SceneBuilder.ReferenceResolution.x, height / SceneBuilder.ReferenceResolution.y);
+            try
+            {
+                Canvas.ForceUpdateCanvases();
+                build((RectTransform)canvasGo.transform);
+                Canvas.ForceUpdateCanvases();
+                foreach (var lg in canvasGo.GetComponentsInChildren<UnityEngine.UI.LayoutGroup>(true))
+                    UnityEngine.UI.LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)lg.transform);
+                Canvas.ForceUpdateCanvases();
+                cam.Render();
+                var prev = RenderTexture.active;
+                RenderTexture.active = rt;
+                var tex = new Texture2D(width, height, TextureFormat.RGB24, false);
+                tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+                tex.Apply();
+                RenderTexture.active = prev;
+                File.WriteAllBytes(path, tex.EncodeToPNG());
+                UnityEngine.Object.DestroyImmediate(tex);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(canvasGo);
+                UnityEngine.Object.DestroyImmediate(camGo);
+                rt.Release();
+                UnityEngine.Object.DestroyImmediate(rt);
+            }
         }
 
         private static void CaptureScenario(Scenario s, string folder, int width, int height)
