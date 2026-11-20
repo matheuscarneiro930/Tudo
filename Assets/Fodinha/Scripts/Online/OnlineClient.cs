@@ -1,10 +1,5 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Net.WebSockets;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Fodinha.Game;
 using Fodinha.Hosting;
 using Fodinha.Net;
@@ -21,7 +16,8 @@ namespace Fodinha.Online
     /// <summary>
     /// Conexão com o servidor (WebSocket). Vive entre as cenas. Reconecta sozinho enquanto o jogador estiver online
     /// e se reapresenta com o token salvo, recuperando o lugar na sala/partida.
-    /// Todos os eventos são disparados na thread principal da Unity.
+    /// A conexão (<see cref="ISocketTransport"/>) é consultada a cada quadro, então tudo acontece na thread principal:
+    /// funciona igual no celular, no PC e no navegador.
     /// </summary>
     public sealed class OnlineClient : MonoBehaviour, IOnlineSender
     {
@@ -33,22 +29,17 @@ namespace Fodinha.Online
         /// <summary>Intervalo dos "toques" HTTP que impedem o servidor gratuito de dormir no meio de uma sala.</summary>
         public const float KeepAwakeSeconds = 240f;
 
-        private float nextKeepAwake;
-
         private static OnlineClient instance;
 
-        private readonly ConcurrentQueue<string> incoming = new ConcurrentQueue<string>();
-        private readonly ConcurrentQueue<Exception> failures = new ConcurrentQueue<Exception>();
         private readonly Queue<string> pending = new Queue<string>();
-        private readonly SemaphoreSlim sendLock = new SemaphoreSlim(1, 1);
-        private ClientWebSocket socket;
-        private CancellationTokenSource cts;
+        private ISocketTransport transport;
+        private float connectStartedAt;
         private bool wantConnection;
         private bool welcomed;
         private int attempts;
         private float reconnectAt;
         private float nextPing;
-        private int generation;
+        private float nextKeepAwake;
 
         public static OnlineClient Instance
         {
@@ -110,73 +101,25 @@ namespace Fodinha.Online
             CloseSocket();
         }
 
-        private async void BeginConnect()
+        private void BeginConnect()
         {
-            int myGeneration = ++generation;
-            SetState(ConnectionState.Connecting);
             welcomed = false;
-            var ws = new ClientWebSocket();
-            ws.Options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-            var source = new CancellationTokenSource();
-            socket = ws;
-            cts = source;
-
+            SetState(ConnectionState.Connecting);
+            connectStartedAt = Time.unscaledTime;
             try
             {
-                var uri = new Uri(ServerUrl);
-                using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(source.Token))
-                {
-                    // O servidor gratuito pode estar "dormindo" e levar ~50 s para acordar.
-                    timeout.CancelAfter(TimeSpan.FromSeconds(ConnectTimeoutSeconds));
-                    await ws.ConnectAsync(uri, timeout.Token);
-                }
+                transport = SocketTransport.Open(ServerUrl);
             }
             catch (Exception e)
             {
-                if (myGeneration != generation) return;
-                OnConnectionLost("Não foi possível conectar ao servidor.", e);
-                return;
-            }
-            if (myGeneration != generation) return;
-
-            attempts = 0;
-            SetState(ConnectionState.Connected);
-            _ = Task.Run(() => ReceiveLoop(ws, source.Token));
-            SendNow(Protocol.Encode(Protocol.ToServer.Hello, new HelloMsg
-            {
-                name = GamePrefs.PlayerName,
-                token = GamePrefs.OnlineToken,
-                version = Protocol.Version
-            }));
-        }
-
-        private async Task ReceiveLoop(ClientWebSocket ws, CancellationToken token)
-        {
-            var buffer = new byte[16 * 1024];
-            var sb = new StringBuilder();
-            try
-            {
-                while (ws.State == WebSocketState.Open && !token.IsCancellationRequested)
-                {
-                    var r = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), token);
-                    if (r.MessageType == WebSocketMessageType.Close) break;
-                    sb.Append(Encoding.UTF8.GetString(buffer, 0, r.Count));
-                    if (!r.EndOfMessage) continue;
-                    incoming.Enqueue(sb.ToString());
-                    sb.Clear();
-                }
-                failures.Enqueue(new WebSocketException("Conexão encerrada pelo servidor."));
-            }
-            catch (Exception e)
-            {
-                if (!token.IsCancellationRequested) failures.Enqueue(e);
+                OnConnectionLost("Endereço do servidor inválido.", e.Message);
             }
         }
 
-        private void OnConnectionLost(string message, Exception e)
+        private void OnConnectionLost(string message, string detail)
         {
             CloseSocket();
-            if (e != null) Debug.Log("[Fodinha] Conexão: " + e.Message);
+            if (!string.IsNullOrEmpty(detail)) Debug.Log("[Fodinha] Conexão: " + detail);
             if (!wantConnection) return;
             attempts++;
             reconnectAt = Time.unscaledTime + Mathf.Min(10f, Mathf.Pow(2f, attempts - 1));
@@ -187,13 +130,9 @@ namespace Fodinha.Online
 
         private void CloseSocket()
         {
-            generation++;
             welcomed = false;
-            try { cts?.Cancel(); } catch { /* ignorado */ }
-            try { socket?.Abort(); } catch { /* ignorado */ }
-            try { socket?.Dispose(); } catch { /* ignorado */ }
-            socket = null;
-            cts = null;
+            try { transport?.Close(); } catch { /* ignorado */ }
+            transport = null;
             SetState(ConnectionState.Offline);
         }
 
@@ -218,37 +157,16 @@ namespace Fodinha.Online
             }
         }
 
-        private async void SendNow(string json)
+        private void SendNow(string json)
         {
-            var ws = socket;
-            if (ws == null || ws.State != WebSocketState.Open) return;
-            var bytes = Encoding.UTF8.GetBytes(json);
-            await sendLock.WaitAsync();
-            try
-            {
-                await ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
-            }
-            catch (Exception e)
-            {
-                failures.Enqueue(e);
-            }
-            finally
-            {
-                sendLock.Release();
-            }
+            if (transport != null && transport.Status == SocketStatus.Open) transport.Send(json);
         }
 
-        // ------------------------------------------------------------------ recebimento (thread principal)
+        // ------------------------------------------------------------------ a cada quadro (thread principal)
 
         private void Update()
         {
-            while (incoming.TryDequeue(out var json)) Dispatch(json);
-
-            if (failures.TryDequeue(out var failure))
-            {
-                while (failures.TryDequeue(out _)) { }
-                if (State != ConnectionState.Offline) OnConnectionLost("Conexão perdida. Reconectando...", failure);
-            }
+            PollTransport();
 
             if (wantConnection && State == ConnectionState.Offline && Time.unscaledTime >= reconnectAt) BeginConnect();
 
@@ -263,6 +181,43 @@ namespace Fodinha.Online
                 nextKeepAwake = Time.unscaledTime + KeepAwakeSeconds;
                 WakeUpServer();
             }
+        }
+
+        private void PollTransport()
+        {
+            if (transport == null) return;
+            var t = transport;
+
+            if (State == ConnectionState.Connecting)
+            {
+                if (t.Status == SocketStatus.Open)
+                {
+                    attempts = 0;
+                    SetState(ConnectionState.Connected);
+                    SendNow(Protocol.Encode(Protocol.ToServer.Hello, new HelloMsg
+                    {
+                        name = GamePrefs.PlayerName,
+                        token = GamePrefs.OnlineToken,
+                        version = Protocol.Version
+                    }));
+                }
+                else if (t.Status == SocketStatus.Closed)
+                {
+                    OnConnectionLost("Não foi possível conectar ao servidor.", t.Error);
+                    return;
+                }
+                else if (Time.unscaledTime - connectStartedAt > ConnectTimeoutSeconds)
+                {
+                    OnConnectionLost("Não foi possível conectar ao servidor.", "tempo esgotado");
+                    return;
+                }
+            }
+
+            // Mensagens primeiro (inclusive as que chegaram logo antes de a conexão cair).
+            while (transport == t && t.TryReceive(out var json)) Dispatch(json);
+
+            if (transport == t && State == ConnectionState.Connected && t.Status == SocketStatus.Closed)
+                OnConnectionLost("Conexão perdida. Reconectando...", t.Error);
         }
 
         /// <summary>

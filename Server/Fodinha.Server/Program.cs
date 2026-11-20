@@ -35,7 +35,25 @@ namespace Fodinha.Server
             var app = builder.Build();
             app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(20) });
 
-            app.MapGet("/", () => "Fodinha Online - servidor no ar. Protocolo v" + Protocol.Version);
+            // Versão web do jogo (wwwroot/, gerada pelo Unity): "/" abre o jogo no navegador.
+            app.UseDefaultFiles();
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                ServeUnknownFileTypes = true,
+                DefaultContentType = "application/octet-stream",
+                OnPrepareResponse = ctx =>
+                {
+                    var h = WebGlFiles.For(ctx.File.Name);
+                    if (h == null) return;
+                    var headers = ctx.Context.Response.Headers;
+                    headers["Content-Type"] = h.ContentType;
+                    if (h.ContentEncoding != null) headers["Content-Encoding"] = h.ContentEncoding;
+                    headers["Cache-Control"] = h.CacheControl;
+                }
+            });
+            app.UseRouting();
+
+            app.MapGet("/info", () => "Fodinha Online - servidor no ar. Protocolo v" + Protocol.Version);
             app.MapGet("/health", async (GameHost host) =>
             {
                 var stats = await host.Query(core => new { rooms = core.RoomCount, players = core.PlayerCount, connected = core.ConnectedCount });

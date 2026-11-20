@@ -29,13 +29,26 @@ namespace Fodinha.Game
             get
             {
                 var url = PlayerPrefs.GetString(KeyServerUrl, "");
-                return string.IsNullOrWhiteSpace(url) ? DefaultServerUrl : url.Trim();
+                return string.IsNullOrWhiteSpace(url) ? DefaultForPlatform() : url.Trim();
             }
             set
             {
                 PlayerPrefs.SetString(KeyServerUrl, value == null || value.Trim() == DefaultServerUrl ? "" : value.Trim());
                 PlayerPrefs.Save();
             }
+        }
+
+        /// <summary>
+        /// Na versão web, o jogo é servido pelo próprio servidor: usa o mesmo endereço da página (https → wss, /ws).
+        /// Nas outras plataformas, o servidor padrão.
+        /// </summary>
+        private static string DefaultForPlatform()
+        {
+            if (Application.platform == RuntimePlatform.WebGLPlayer &&
+                System.Uri.TryCreate(Application.absoluteURL, System.UriKind.Absolute, out var page) &&
+                (page.Scheme == "https" || page.Scheme == "http"))
+                return (page.Scheme == "https" ? "wss://" : "ws://") + page.Authority + "/ws";
+            return DefaultServerUrl;
         }
 
         public static bool HasCustomServer => !string.IsNullOrWhiteSpace(PlayerPrefs.GetString(KeyServerUrl, ""));

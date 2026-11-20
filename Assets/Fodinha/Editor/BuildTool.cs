@@ -87,6 +87,48 @@ namespace Fodinha.EditorTools
             Report(report);
         }
 
+        /// <summary>A versão web vai direto para o servidor, que a publica em "/".</summary>
+        public const string WebGLOutput = "Server/Fodinha.Server/wwwroot";
+
+        /// <summary>
+        /// Versão web (abre no navegador, inclusive no iPhone). Sai em Server/Fodinha.Server/wwwroot.
+        ///   -executeMethod Fodinha.EditorTools.BuildTool.BuildWebGL
+        /// </summary>
+        [MenuItem("Fodinha/Gerar versão web (WebGL)")]
+        public static void BuildWebGL()
+        {
+            ProjectConfigurator.Apply();
+            SceneBuilder.UpdateBuildSettings();
+
+            if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.WebGL)
+                EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.WebGL, BuildTarget.WebGL);
+
+            PlayerSettings.WebGL.template = "PROJECT:Fodinha";
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
+            PlayerSettings.WebGL.decompressionFallback = false; // o servidor envia Content-Encoding
+            PlayerSettings.WebGL.nameFilesAsHashes = true;      // permite cache longo no navegador
+            PlayerSettings.WebGL.dataCaching = true;
+            PlayerSettings.defaultWebScreenWidth = 540;
+            PlayerSettings.defaultWebScreenHeight = 960;
+            PlayerSettings.SetManagedStrippingLevel(UnityEditor.Build.NamedBuildTarget.WebGL, ManagedStrippingLevel.Minimal);
+
+            string output = ArgValue("-buildOutput") ?? WebGLOutput;
+            // Limpa o build anterior (os nomes mudam a cada versão por causa do hash).
+            if (Directory.Exists(Path.Combine(output, "Build"))) Directory.Delete(Path.Combine(output, "Build"), true);
+            if (Directory.Exists(Path.Combine(output, "TemplateData"))) Directory.Delete(Path.Combine(output, "TemplateData"), true);
+            Directory.CreateDirectory(output);
+
+            var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
+            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            {
+                scenes = scenes,
+                locationPathName = output,
+                target = BuildTarget.WebGL,
+                options = BuildOptions.None
+            });
+            Report(report);
+        }
+
         /// <summary>Valor de um argumento da linha de comando (ex.: -buildOutput caminho).</summary>
         public static string ArgValue(string name)
         {
