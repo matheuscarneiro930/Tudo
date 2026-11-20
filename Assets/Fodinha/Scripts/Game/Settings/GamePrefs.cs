@@ -40,11 +40,22 @@ namespace Fodinha.Game
 
         public static bool HasCustomServer => !string.IsNullOrWhiteSpace(PlayerPrefs.GetString(KeyServerUrl, ""));
 
-        /// <summary>Token secreto dado pelo servidor: permite reconectar e voltar ao mesmo lugar na sala.</summary>
+        private static string sessionToken = "";
+
+        /// <summary>
+        /// Token secreto dado pelo servidor: permite reconectar e voltar ao mesmo lugar na sala.
+        /// No celular fica salvo (sobrevive a fechar o app). No PC fica só na memória, para várias janelas
+        /// abertas ao mesmo tempo (testes) serem jogadores diferentes.
+        /// </summary>
         public static string OnlineToken
         {
-            get => PlayerPrefs.GetString(KeyOnlineToken, "");
-            set { PlayerPrefs.SetString(KeyOnlineToken, value ?? ""); PlayerPrefs.Save(); }
+            get => Application.isMobilePlatform ? PlayerPrefs.GetString(KeyOnlineToken, "") : sessionToken;
+            set
+            {
+                if (!Application.isMobilePlatform) { sessionToken = value ?? ""; return; }
+                PlayerPrefs.SetString(KeyOnlineToken, value ?? "");
+                PlayerPrefs.Save();
+            }
         }
 
         public static string PlayerName

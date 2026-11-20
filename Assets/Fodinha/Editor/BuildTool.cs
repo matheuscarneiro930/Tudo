@@ -25,15 +25,25 @@ namespace Fodinha.EditorTools
             PlayerSettings.resizableWindow = true;
 
             var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
-            Directory.CreateDirectory(Path.GetDirectoryName(WindowsOutput));
+            string output = ArgValue("-buildOutput") ?? WindowsOutput;
+            Directory.CreateDirectory(Path.GetDirectoryName(output));
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
                 scenes = scenes,
-                locationPathName = WindowsOutput,
+                locationPathName = output,
                 target = BuildTarget.StandaloneWindows64,
                 options = BuildOptions.None
             });
             Report(report);
+        }
+
+        /// <summary>Valor de um argumento da linha de comando (ex.: -buildOutput caminho).</summary>
+        public static string ArgValue(string name)
+        {
+            var args = System.Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++)
+                if (args[i] == name) return args[i + 1];
+            return null;
         }
 
         private static void Report(BuildReport report)
