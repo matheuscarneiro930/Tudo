@@ -17,11 +17,12 @@ Você está recebendo o projeto **Fodinha Online** (Unity 6 + C# + Photon Fusion
 6. O usuário prefere instruções passo a passo na Unity (onde clicar, que objeto, que referência no Inspector).
    Sempre que possível, FAÇA você mesmo (criar arquivos, rodar comandos, configurar cenas) em vez de pedir ao usuário.
 
+## Feito na etapa 1 (projeto Unity)
+- Projeto Unity 6000.4.7f1 criado nesta pasta (`Packages/`, `ProjectSettings/`), pacotes enxutos (uGUI, Test Framework).
+- `Tools/run-unity-tests.ps1` roda os testes EditMode em batchmode: 103/103 passando.
+
 ## Próxima tarefa (etapa 2)
-1. Criar o projeto **Unity 6 LTS** usando esta pasta como raiz (as pastas `Assets/` e `Tools/` já existem;
-   faltam `ProjectSettings/` e `Packages/`). Instalar o pacote Test Framework se necessário.
-2. Rodar os testes EditMode na Unity (Test Runner ou `Unity -batchmode -runTests -testPlatform EditMode`) e confirmar que passam.
-3. Montar a **partida offline contra bots**: um `LocalMatchController` (MonoBehaviour) que roda o `MatchEngine`,
+1. Montar a **partida offline contra bots**: um `LocalMatchController` (MonoBehaviour) que roda o `MatchEngine`,
    controla pausas/animações e timer, e alimenta uma interface para celular (retrato):
    mão com N cartas, mesa com até 14 adversários, painel de aposta, vira/manilha, vidas, vez do jogador, resultado da rodada.
 4. Depois: integrar Photon Fusion 2 (modo Host), salas públicas/privadas com código.

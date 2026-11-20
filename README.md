@@ -10,11 +10,13 @@ apostas de vazas, vidas e manilha. Unity 6 + C# + Photon Fusion 2, foco em celul
 
 | Etapa | Situação |
 |---|---|
-| 1. Núcleo de regras em C# puro + testes (2–15 jogadores) | ✅ pronto |
+| 0. Núcleo de regras em C# puro + testes (2–15 jogadores) | ✅ pronto |
+| 1. Projeto Unity 6 (6000.4.7f1) criado, testes EditMode passando na Unity | ✅ pronto |
 | 2. Partida offline contra bots na Unity | ⏳ próxima |
-| 3. Multiplayer com Photon Fusion 2 (salas públicas/privadas) | ⏳ |
-| 4. Interface final, animações e som | ⏳ |
-| 5. Perfil, ranking, servidor dedicado, publicação | ⏳ |
+| 3. Menu principal | ⏳ |
+| 4. Multiplayer online (salas públicas/privadas com código) | ⏳ |
+| 5. Polimento: animações, sons, layout responsivo, ícone | ⏳ |
+| 6. Build Android (.apk) | ⏳ |
 
 ## Estrutura
 
@@ -25,9 +27,17 @@ Tools/                        projetos .NET para compilar/testar o núcleo fora 
 Docs/                         regras e arquitetura
 ```
 
-Este repositório é a raiz do projeto Unity. As pastas `ProjectSettings/` e `Packages/` entram quando o projeto Unity 6 for criado nesta pasta (próxima etapa).
+Este repositório é a raiz do projeto Unity (Unity 6000.4.7f1). Abra a pasta pelo Unity Hub → Add → Add project from disk.
 
 ## Rodando os testes
+
+Na Unity (batchmode, com o editor fechado):
+
+```bash
+powershell -ExecutionPolicy Bypass -File Tools/run-unity-tests.ps1
+```
+
+Fora da Unity:
 
 ```bash
 dotnet test Tools/CoreTests
