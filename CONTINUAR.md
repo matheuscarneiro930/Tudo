@@ -19,11 +19,16 @@ Você está recebendo o projeto **Fodinha Online** (Unity 6000.4.7f1 + C#, celul
   pedidos online vão para `MenuRoot.OnlineHandler : IOnlineMenuHandler`, ainda não implementado), `RulesEditor`,
   `GamePrefs` (nome, som, vibração, últimas regras), `RoomCode`/`RoomOptions`/`RoomListing` (Hosting).
   184 EditMode + 3 PlayMode passando.
-- Etapa 4 ✅ (falta hospedar): o dono escolheu **servidor .NET próprio** (não Photon). `Server/Fodinha.Server` (ServerCore,
+- Etapa 4 ✅: o dono escolheu **servidor .NET próprio** (não Photon). `Server/Fodinha.Server` (ServerCore,
   GameHost, WebSocket /ws), protocolo em `Assets/Fodinha/Scripts/Net`, cliente em `Assets/Fodinha/Scripts/Online`,
   cenas `Sala` e `PartidaOnline`. Testes: 136 dotnet (núcleo+host), 26 do servidor (inclui WebSocket real),
   197 EditMode, 4 PlayMode (inclui ponta a ponta subindo o servidor). Servidor no ar: https://fodinha-server-0ccs.onrender.com (Render, plano free; dorme após 15 min sem uso, ~50 s para acordar).
-  `GamePrefs.DefaultServerUrl` deve apontar para o endereço público quando o servidor estiver no ar.
+  `GamePrefs.DefaultServerUrl` = wss://fodinha-server-0ccs.onrender.com/ws. O push no branch faz o Render publicar sozinho.
+- Etapa 5 ✅ polimento: Tweens (animações), Sfx (sons sintetizados), vibração, IconBuilder (ícone), splash.
+- Etapa 6 ✅ APK: `BuildTool.BuildAndroid` (rodar por C:Fodinha, junção sem acento: Gradle não aceita "Área").
+  Saída Builds/Android/FodinhaOnline.apk; instruções em Docs/INSTALAR_ANDROID.md.
+- Regras oficiais (pedido do dono): `RuleSet.WithOfficialRules()` — vira, naipe desempata, pé não fecha,
+  errou perde 1, +1 carta por rodada, 1ª rodada cega. Só vidas, tempo, teto de cartas e tempos esgotados são opções.
 
 ## Ferramentas
 - `Tools/run-unity-tests.ps1 [-Platform PlayMode]` — testes no Unity (feche o Editor antes).
