@@ -7,6 +7,10 @@ param(
 )
 
 $project = Split-Path -Parent $PSScriptRoot
+# Usa sempre o mesmo caminho do projeto: o atalho C:\Fodinha (sem acento) quando existir.
+# Alternar entre dois caminhos pode deixar scripts "perdidos" no build, e o Android não aceita acento no caminho.
+$ascii = "C:\Fodinha"
+if ((Test-Path $ascii) -and ((Get-Item $ascii).Target -eq (Resolve-Path $project).Path -or (Resolve-Path $project).Path -eq $ascii)) { $project = $ascii }
 $outDir = Join-Path $env:TEMP "fodinha-tests"
 New-Item -ItemType Directory -Force $outDir | Out-Null
 $results = Join-Path $outDir "$Platform-results.xml"

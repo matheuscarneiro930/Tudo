@@ -18,7 +18,7 @@ namespace Fodinha.EditorTools
         [MenuItem("Fodinha/Gerar build Windows (teste no PC)")]
         public static void BuildWindows()
         {
-            SceneBuilder.UpdateBuildSettings();
+            if (!Prepare()) return;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
             PlayerSettings.defaultScreenWidth = 540;
             PlayerSettings.defaultScreenHeight = 960;
@@ -54,6 +54,7 @@ namespace Fodinha.EditorTools
 
             if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.Android)
                 EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.Android, BuildTarget.Android);
+            if (!ValidateScenes()) { if (Application.isBatchMode) EditorApplication.Exit(1); return; }
 
             // Usa as ferramentas Android instaladas junto com o Unity (módulos do Hub).
             string androidPlayer = Path.Combine(EditorApplication.applicationContentsPath, "PlaybackEngines", "AndroidPlayer");
@@ -102,6 +103,7 @@ namespace Fodinha.EditorTools
 
             if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.WebGL)
                 EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.WebGL, BuildTarget.WebGL);
+            if (!ValidateScenes()) { if (Application.isBatchMode) EditorApplication.Exit(1); return; }
 
             PlayerSettings.WebGL.template = "PROJECT:Fodinha";
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Gzip;
@@ -129,6 +131,56 @@ namespace Fodinha.EditorTools
             Report(report);
         }
 
+        /// <summary>
+        /// Garante que nenhum componente das cenas do build está com o script "perdido" (o que deixa a tela vazia).
+        /// Se encontrar, reimporta os scripts e confere de novo; se continuar, interrompe o build.
+        /// </summary>
+        public static bool ValidateScenes()
+        {
+            int missing = CountMissingScripts();
+            if (missing > 0)
+            {
+                Debug.LogWarning("[Fodinha] " + missing + " componente(s) sem script nas cenas; reimportando scripts...");
+                AssetDatabase.ImportAsset("Assets/Fodinha/Scripts", ImportAssetOptions.ImportRecursive | ImportAssetOptions.ForceUpdate);
+                AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+                missing = CountMissingScripts();
+            }
+            if (missing > 0)
+            {
+                Debug.LogError("[Fodinha] Build cancelado: " + missing + " componente(s) continuam sem script. Rode de novo.");
+                return false;
+            }
+            Debug.Log("[Fodinha] Cenas conferidas: todos os scripts presentes.");
+            return true;
+        }
+
+        private static int CountMissingScripts()
+        {
+            int total = 0;
+            foreach (var s in EditorBuildSettings.scenes)
+            {
+                if (!s.enabled) continue;
+                var scene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(s.path, UnityEditor.SceneManagement.OpenSceneMode.Single);
+                foreach (var root in scene.GetRootGameObjects())
+                    foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                    {
+                        int n = GameObjectUtility.GetMonoBehavioursWithMissingScriptCount(t.gameObject);
+                        if (n > 0) Debug.LogWarning("[Fodinha] Script perdido em '" + t.name + "' (" + s.path + ")");
+                        total += n;
+                    }
+            }
+            return total;
+        }
+
+        private static bool Prepare()
+        {
+            ProjectConfigurator.Apply();
+            SceneBuilder.UpdateBuildSettings();
+            if (ValidateScenes()) return true;
+            if (Application.isBatchMode) EditorApplication.Exit(1);
+            return false;
+        }
+
         /// <summary>Valor de um argumento da linha de comando (ex.: -buildOutput caminho).</summary>
         public static string ArgValue(string name)
         {
@@ -143,7 +195,15 @@ namespace Fodinha.EditorTools
             var s = report.summary;
             Debug.Log("[Fodinha] Build " + s.platform + ": " + s.result + " (" + s.totalErrors + " erros, " +
                       (s.totalSize / (1024 * 1024)) + " MB) em " + s.outputPath);
-            if (s.result != BuildResult.Succeeded && Application.isBatchMode) EditorApplication.Exit(1);
+
+            // Script perdido no empacotamento = jogo abre com tela vazia. Trata como falha.
+            int missing = 0;
+            foreach (var step in report.steps)
+                foreach (var m in step.messages)
+                    if (m.content != null && m.content.Contains("is missing or no valid script")) missing++;
+            if (missing > 0) Debug.LogError("[Fodinha] BUILD COM DEFEITO: " + missing + " script(s) perdido(s) nas cenas. Não publique.");
+
+            if ((s.result != BuildResult.Succeeded || missing > 0) && Application.isBatchMode) EditorApplication.Exit(1);
         }
     }
 }
