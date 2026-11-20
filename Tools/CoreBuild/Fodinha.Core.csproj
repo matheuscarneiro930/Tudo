@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compila o núcleo de regras FORA da Unity, com as mesmas restrições da Unity 6
+       (netstandard2.1 + C# 9). Os arquivos-fonte ficam em Assets/; aqui só apontamos para eles. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AssemblyName>Fodinha.Core</AssemblyName>
+    <RootNamespace>Fodinha.Core</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Fodinha/Scripts/Core/**/*.cs" />
+  </ItemGroup>
+</Project>
