@@ -25,7 +25,7 @@ Você está recebendo o projeto **Fodinha Online** (Unity 6000.4.7f1 + C#, celul
   197 EditMode, 4 PlayMode (inclui ponta a ponta subindo o servidor). Servidor no ar: https://fodinha-server-0ccs.onrender.com (Render, plano free; dorme após 15 min sem uso, ~50 s para acordar).
   `GamePrefs.DefaultServerUrl` = wss://fodinha-server-0ccs.onrender.com/ws. O push no branch faz o Render publicar sozinho.
 - Etapa 5 ✅ polimento: Tweens (animações), Sfx (sons sintetizados), vibração, IconBuilder (ícone), splash.
-- Etapa 6 ✅ APK: `BuildTool.BuildAndroid` (rodar por C:Fodinha, junção sem acento: Gradle não aceita "Área").
+- Etapa 6 ✅ APK: `BuildTool.BuildAndroid` (rodar por C:\Fodinha, junção sem acento: Gradle não aceita "Área").
   Saída Builds/Android/FodinhaOnline.apk; instruções em Docs/INSTALAR_ANDROID.md.
 - Regras oficiais (pedido do dono): `RuleSet.WithOfficialRules()` — vira, naipe desempata, pé não fecha,
   errou perde 1, +1 carta por rodada, 1ª rodada cega. Só vidas, tempo, teto de cartas e tempos esgotados são opções.
