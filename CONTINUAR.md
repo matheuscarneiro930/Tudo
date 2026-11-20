@@ -22,7 +22,7 @@ Você está recebendo o projeto **Fodinha Online** (Unity 6000.4.7f1 + C#, celul
 - Etapa 4 ✅ (falta hospedar): o dono escolheu **servidor .NET próprio** (não Photon). `Server/Fodinha.Server` (ServerCore,
   GameHost, WebSocket /ws), protocolo em `Assets/Fodinha/Scripts/Net`, cliente em `Assets/Fodinha/Scripts/Online`,
   cenas `Sala` e `PartidaOnline`. Testes: 136 dotnet (núcleo+host), 26 do servidor (inclui WebSocket real),
-  197 EditMode, 4 PlayMode (inclui ponta a ponta subindo o servidor). Hospedagem planejada: Render (render.yaml, plano free).
+  197 EditMode, 4 PlayMode (inclui ponta a ponta subindo o servidor). Servidor no ar: https://fodinha-server-0ccs.onrender.com (Render, plano free; dorme após 15 min sem uso, ~50 s para acordar).
   `GamePrefs.DefaultServerUrl` deve apontar para o endereço público quando o servidor estiver no ar.
 
 ## Ferramentas

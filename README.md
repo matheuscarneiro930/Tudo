@@ -14,7 +14,7 @@ apostas de vazas, vidas e manilha. Unity 6 + C# + Photon Fusion 2, foco em celul
 | 1. Projeto Unity 6 (6000.4.7f1) criado, testes EditMode passando na Unity | ✅ pronto |
 | 2. Partida offline contra bots na Unity (cena `PartidaOffline`) | ✅ pronto |
 | 3. Menu principal (cena `Menu`: offline com regras, criar sala, código, salas públicas, configurações) | ✅ pronto |
-| 4. Multiplayer online com servidor .NET próprio (salas, lobby, reconexão, bot no lugar de quem cai) | ✅ pronto (falta hospedar) |
+| 4. Multiplayer online com servidor .NET próprio (salas, lobby, reconexão, bot no lugar de quem cai) | ✅ pronto (servidor no Render) |
 | 5. Polimento: animações, sons, layout responsivo, ícone | ⏳ |
 | 6. Build Android (.apk) | ⏳ |
 

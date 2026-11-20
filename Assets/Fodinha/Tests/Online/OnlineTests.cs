@@ -186,6 +186,15 @@ namespace Fodinha.Online.Tests
             client.Dispatch("lixo que não é json");
         }
 
+        [TestCase("wss://fodinha-server-0ccs.onrender.com/ws", "https://fodinha-server-0ccs.onrender.com/health")]
+        [TestCase("ws://192.168.0.10:5080/ws", "http://192.168.0.10:5080/health")]
+        [TestCase("nao e url", null)]
+        [TestCase("https://x.com/ws", null)]
+        public void EnderecoDoHealth(string server, string expected)
+        {
+            Assert.That(OnlineClient.HealthUrl(server), Is.EqualTo(expected));
+        }
+
         [Test]
         public void ErroDeAcao_TemTextoAmigavel()
         {

@@ -40,6 +40,7 @@ namespace Fodinha.Game.Menu
             screen.CreateRoomRequested += options => WithOnline(h => h.CreateRoom(screen, options));
             screen.JoinRoomRequested += code => WithOnline(h => h.JoinRoom(screen, code));
             screen.RefreshRoomsRequested += () => WithOnline(h => h.RefreshPublicRooms(screen), quiet: true);
+            OnlineHandler?.OnMenuOpened(screen);
         }
 
         public void Configure(MenuScreen menuScreen, string offlineSceneName)
@@ -69,6 +70,9 @@ namespace Fodinha.Game.Menu
     /// <summary>Ações online disparadas pelo menu (implementado pela camada de rede).</summary>
     public interface IOnlineMenuHandler
     {
+        /// <summary>O menu abriu (ex.: acordar o servidor com antecedência).</summary>
+        void OnMenuOpened(MenuScreen screen);
+
         void CreateRoom(MenuScreen screen, RoomOptions options);
         void JoinRoom(MenuScreen screen, string code);
         void RefreshPublicRooms(MenuScreen screen);

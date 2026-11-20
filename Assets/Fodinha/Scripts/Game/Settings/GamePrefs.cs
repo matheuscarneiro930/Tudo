@@ -20,8 +20,8 @@ namespace Fodinha.Game
 
         public const int MaxNameLength = 14;
 
-        /// <summary>Servidor padrão do jogo online. Trocado para o endereço público quando o servidor for hospedado.</summary>
-        public const string DefaultServerUrl = "ws://localhost:5080/ws";
+        /// <summary>Servidor padrão do jogo online (Render). Para testar com um servidor local: ws://IP-DO-PC:5080/ws.</summary>
+        public const string DefaultServerUrl = "wss://fodinha-server-0ccs.onrender.com/ws";
 
         /// <summary>Endereço do servidor (Configurações → Servidor). Vazio = padrão.</summary>
         public static string ServerUrl

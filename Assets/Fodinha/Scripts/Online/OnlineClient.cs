@@ -27,6 +27,14 @@ namespace Fodinha.Online
     {
         public enum ConnectionState { Offline, Connecting, Connected }
 
+        /// <summary>Tempo máximo para conectar (cobre o servidor gratuito acordando).</summary>
+        public const float ConnectTimeoutSeconds = 75f;
+
+        /// <summary>Intervalo dos "toques" HTTP que impedem o servidor gratuito de dormir no meio de uma sala.</summary>
+        public const float KeepAwakeSeconds = 240f;
+
+        private float nextKeepAwake;
+
         private static OnlineClient instance;
 
         private readonly ConcurrentQueue<string> incoming = new ConcurrentQueue<string>();
@@ -118,7 +126,8 @@ namespace Fodinha.Online
                 var uri = new Uri(ServerUrl);
                 using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(source.Token))
                 {
-                    timeout.CancelAfter(TimeSpan.FromSeconds(12));
+                    // O servidor gratuito pode estar "dormindo" e levar ~50 s para acordar.
+                    timeout.CancelAfter(TimeSpan.FromSeconds(ConnectTimeoutSeconds));
                     await ws.ConnectAsync(uri, timeout.Token);
                 }
             }
@@ -248,6 +257,35 @@ namespace Fodinha.Online
                 nextPing = Time.unscaledTime + 15f;
                 SendNow(Protocol.Encode(Protocol.ToServer.Ping));
             }
+
+            if (Room != null && Time.unscaledTime >= nextKeepAwake)
+            {
+                nextKeepAwake = Time.unscaledTime + KeepAwakeSeconds;
+                WakeUpServer();
+            }
+        }
+
+        /// <summary>
+        /// Faz uma requisição HTTP ao /health do servidor (sem esperar resposta). Acorda o servidor gratuito
+        /// antes do jogador tocar em "Criar sala" e o mantém acordado durante as partidas.
+        /// </summary>
+        public void WakeUpServer()
+        {
+            string url = HealthUrl(GamePrefs.ServerUrl);
+            if (url == null || !Application.isPlaying) return;
+            var request = UnityEngine.Networking.UnityWebRequest.Get(url);
+            request.timeout = 90;
+            request.SendWebRequest().completed += _ => request.Dispose();
+        }
+
+        /// <summary>wss://host/ws → https://host/health (ws:// → http://).</summary>
+        public static string HealthUrl(string serverUrl)
+        {
+            if (string.IsNullOrEmpty(serverUrl)) return null;
+            if (!Uri.TryCreate(serverUrl, UriKind.Absolute, out var uri)) return null;
+            string scheme = uri.Scheme == "wss" ? "https" : uri.Scheme == "ws" ? "http" : null;
+            if (scheme == null) return null;
+            return new UriBuilder(scheme, uri.Host, uri.Port, "/health").Uri.ToString();
         }
 
         /// <summary>Processa uma mensagem do servidor (público para testes).</summary>

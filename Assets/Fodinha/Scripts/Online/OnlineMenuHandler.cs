@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Fodinha.Game;
 using Fodinha.Game.Menu;
+using Fodinha.Game.UI;
 using Fodinha.Hosting;
 using Fodinha.Net;
 using UnityEngine;
@@ -13,7 +14,9 @@ namespace Fodinha.Online
     /// <summary>Liga os botões online do menu (criar sala, entrar com código, salas públicas) ao servidor.</summary>
     public sealed class OnlineMenuHandler : IOnlineMenuHandler
     {
-        private const float TimeoutSeconds = 20f;
+        private const float TimeoutSeconds = OnlineClient.ConnectTimeoutSeconds + 15f;
+
+        public void OnMenuOpened(MenuScreen screen) => OnlineClient.Instance.WakeUpServer();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Register()
@@ -90,7 +93,9 @@ namespace Fodinha.Online
             client.ErrorReceived += onError;
             client.ConnectFailed += onFail;
 
-            if (screen != null) screen.SetBusy(true, busyMessage);
+            if (screen != null)
+                screen.SetBusy(true, client.IsConnected ? busyMessage
+                    : busyMessage + "\n\n" + UiKit.Colored("Conectando ao servidor (se ele estava dormindo, pode levar até 1 minuto)", Palette.TextMuted));
             send(client);
             client.StartCoroutine(Timeout(() =>
             {
