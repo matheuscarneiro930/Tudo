@@ -132,6 +132,10 @@ namespace Fodinha.Core
         public string Name { get; internal set; }
         public int Lives { get; internal set; }
         public bool IsEliminated { get; internal set; }
+
+        /// <summary>Rodada em que foi eliminado (0 = vivo). Público: usado na classificação final.</summary>
+        public int EliminatedAtRound { get; internal set; }
+
         public int Bet { get; internal set; } = PlayerState.NoBet;
         public int TricksWon { get; internal set; }
         public int HandCount { get; internal set; }

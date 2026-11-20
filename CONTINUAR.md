@@ -1,28 +1,30 @@
 # Como continuar este projeto (instruções para o Claude)
 
-Você está recebendo o projeto **Fodinha Online** (Unity 6 + C# + Photon Fusion 2, celular, 2 a 15 jogadores).
-
-## O que já está pronto (etapa 1)
-- Núcleo de regras em C# puro em `Assets/Fodinha/Scripts/Core` (sem dependência da Unity/Photon).
-- 103 testes NUnit em `Assets/Fodinha/Tests/EditMode`, incluindo partidas simuladas de 2 a 15 jogadores. Todos passando.
-- Regras implementadas: `Docs/REGRAS.md`. Arquitetura e próximos passos: `Docs/ARQUITETURA.md`.
-- Testes fora da Unity: `dotnet test Tools/CoreTests`.
+Você está recebendo o projeto **Fodinha Online** (Unity 6000.4.7f1 + C#, celular, 2 a 15 jogadores).
 
 ## Regras de trabalho combinadas com o dono do projeto
 1. Não criar classes duplicadas; não renomear nada sem checar dependências.
 2. Arquitetura pensada para o jogo final e para o multiplayer desde já (nada provisório).
 3. Regras do jogo SÓ no núcleo (`MatchEngine`). A interface apenas desenha `MatchView` e envia pedidos.
 4. O cliente nunca recebe informação privada de outro jogador (usar `MatchEngine.BuildView(assento)`).
-5. Não avançar com erros de compilação. Testar a lógica para 2 a 15 jogadores.
-6. O usuário prefere instruções passo a passo na Unity (onde clicar, que objeto, que referência no Inspector).
-   Sempre que possível, FAÇA você mesmo (criar arquivos, rodar comandos, configurar cenas) em vez de pedir ao usuário.
+5. Não avançar com erros de compilação ou testes falhando. Testar de 2 a 15 jogadores. Commit ao fim de cada etapa.
+6. FAÇA você mesmo (arquivos, comandos, cenas por script de Editor); só peça ao usuário o que for impossível sem ele.
 
-## Feito na etapa 1 (projeto Unity)
-- Projeto Unity 6000.4.7f1 criado nesta pasta (`Packages/`, `ProjectSettings/`), pacotes enxutos (uGUI, Test Framework).
-- `Tools/run-unity-tests.ps1` roda os testes EditMode em batchmode: 103/103 passando.
+## Estado
+- Etapa 1 ✅ projeto Unity criado; testes rodam em batchmode.
+- Etapa 2 ✅ partida offline contra bots: `MatchDirector` (Hosting), `LocalMatchController`, UI em retrato por código,
+  cena `Assets/Fodinha/Scenes/PartidaOffline.unity` (gerada por `Fodinha.EditorTools.SceneBuilder.BuildAll`).
+  164 testes EditMode + 1 PlayMode passando.
 
-## Próxima tarefa (etapa 2)
-1. Montar a **partida offline contra bots**: um `LocalMatchController` (MonoBehaviour) que roda o `MatchEngine`,
-   controla pausas/animações e timer, e alimenta uma interface para celular (retrato):
-   mão com N cartas, mesa com até 14 adversários, painel de aposta, vira/manilha, vidas, vez do jogador, resultado da rodada.
-4. Depois: integrar Photon Fusion 2 (modo Host), salas públicas/privadas com código.
+## Ferramentas
+- `Tools/run-unity-tests.ps1 [-Platform PlayMode]` — testes no Unity (feche o Editor antes).
+- `Tools/run-unity-method.ps1 -Method <Classe.Metodo> [-Graphics]` — métodos de Editor em batchmode.
+- Capturas da UI: `-Method Fodinha.EditorTools.UiSnapshot.CaptureFromCommandLine -Graphics -Extra "-snapshotDir <pasta>"`.
+- `dotnet test Tools/CoreTests` — núcleo + host fora da Unity (rápido).
+- Git e .NET 8 instalados via winget (`C:\Program Files\Git\cmd`, `C:\Program Files\dotnet`).
+
+## Próximas etapas
+3. Menu principal (offline com nº de bots e regras, criar sala, entrar com código, salas públicas, configurações).
+4. Multiplayer (modo Host): salas públicas/privadas com código de 6 caracteres, lobby, host roda `MatchDirector`,
+   clientes enviam pedidos e recebem só `BuildView(assento)`; timer, reconexão, bot no lugar de quem caiu.
+5. Polimento (animações, sons, layout responsivo, ícone). 6. Build Android (.apk).

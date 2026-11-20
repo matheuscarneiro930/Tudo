@@ -279,6 +279,7 @@ namespace Fodinha.Core
                     Name = p.Name,
                     Lives = p.Lives,
                     IsEliminated = p.IsEliminated,
+                    EliminatedAtRound = p.EliminatedAtRound,
                     Bet = p.Bet,
                     TricksWon = p.TricksWon,
                     HandCount = p.hand.Count,

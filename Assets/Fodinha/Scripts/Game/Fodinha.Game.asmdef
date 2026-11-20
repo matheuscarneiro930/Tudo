@@ -1,0 +1,18 @@
+{
+    "name": "Fodinha.Game",
+    "rootNamespace": "Fodinha.Game",
+    "references": [
+        "Fodinha.Core",
+        "Fodinha.Hosting",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

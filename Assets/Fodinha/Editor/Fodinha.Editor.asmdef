@@ -1,0 +1,21 @@
+{
+    "name": "Fodinha.Editor",
+    "rootNamespace": "Fodinha.EditorTools",
+    "references": [
+        "Fodinha.Core",
+        "Fodinha.Hosting",
+        "Fodinha.Game",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
