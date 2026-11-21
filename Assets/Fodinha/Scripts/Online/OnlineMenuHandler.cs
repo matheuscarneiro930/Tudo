@@ -16,9 +16,6 @@ namespace Fodinha.Online
     {
         private const float TimeoutSeconds = OnlineClient.ConnectTimeoutSeconds + 15f;
 
-        /// <summary>Tempo do "vídeo" de recompensa enquanto o anúncio de verdade (AdMob) não está integrado.</summary>
-        public const float PlaceholderAdSeconds = 5f;
-
         private MenuScreen current;
         private bool subscribed;
 
@@ -65,24 +62,18 @@ namespace Fodinha.Online
             OnlineClient.Instance.Send(Protocol.ToServer.GetRanking);
         }
 
-        /// <summary>"Assista e ganhe 100 moedas". O servidor confere o saldo (menos de 500) e o intervalo.</summary>
+        /// <summary>
+        /// "Assista e ganhe 100 moedas": mostra o vídeo premiado (AdMob no celular) e, se a pessoa assistiu até o fim,
+        /// pede a recompensa ao servidor, que confere o saldo (menos de 500) e o intervalo.
+        /// </summary>
         public void ClaimReward(MenuScreen screen)
         {
             current = screen;
-            var client = OnlineClient.Instance;
-            client.StartCoroutine(PlaceholderAd(screen, () => client.Send(Protocol.ToServer.ClaimReward)));
-        }
-
-        private static IEnumerator PlaceholderAd(MenuScreen screen, Action done)
-        {
-            for (float t = PlaceholderAdSeconds; t > 0f; t -= Time.unscaledDeltaTime)
+            Game.Ads.AdService.ShowRewarded(earned =>
             {
-                if (screen == null) yield break;
-                screen.SetBusy(true, "Anúncio\n\n" + UiKit.Colored("Seu vídeo aparece aqui em breve.\nGanhando 100 moedas em " + Mathf.CeilToInt(t) + "...", Palette.TextMuted));
-                yield return null;
-            }
-            if (screen != null) screen.SetBusy(false);
-            done();
+                if (earned) OnlineClient.Instance.Send(Protocol.ToServer.ClaimReward);
+                else if (current != null) current.ShowToast("O vídeo não está disponível agora. Tente de novo em instantes.");
+            });
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]

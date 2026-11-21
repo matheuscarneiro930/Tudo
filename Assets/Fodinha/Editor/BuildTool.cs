@@ -65,6 +65,10 @@ namespace Fodinha.EditorTools
             string ndk = Path.Combine(androidPlayer, "NDK");
             if (Directory.Exists(ndk)) UnityEditor.Android.AndroidExternalToolsSettings.ndkRootPath = ndk;
 
+            // Anúncios: App ID do AdMob e bibliotecas Android do Google (Play Services Ads).
+            AdMobConfigurator.Apply();
+            AdMobConfigurator.ResolveAndroidDependencies();
+
             var android = UnityEditor.Build.NamedBuildTarget.Android;
             PlayerSettings.bundleVersion = Version;
             PlayerSettings.Android.bundleVersionCode = VersionCode;

@@ -54,11 +54,13 @@ namespace Fodinha.Game.Tests
             Setup(players, 500 + players, humanAuto: true);
             int renders = 0;
             controller.ViewChanged += _ => renders++;
+            int adsBefore = Fodinha.Game.Ads.AdService.InterstitialsRequested;
 
             bool done = MatchDriver.AdvanceUntil(controller, v => v.Phase == MatchPhase.MatchOver, humanActs: false);
 
             Assert.That(done, Is.True);
             Assert.That(screen.IsMatchOverVisible, Is.True);
+            Assert.That(Fodinha.Game.Ads.AdService.InterstitialsRequested, Is.EqualTo(adsBefore + 1), "Um anúncio no fim de cada partida.");
             Assert.That(renders, Is.GreaterThan(10));
             Assert.That(controller.View.WinnerSeat, Is.InRange(0, players - 1));
         }

@@ -7,6 +7,7 @@
         "Fodinha.Game",
         "Fodinha.Net",
         "Fodinha.Online",
+        "Fodinha.Ads",
         "UnityEngine.UI"
     ],
     "includePlatforms": [

@@ -9,4 +9,11 @@
   <assembly fullname="Fodinha.Game" preserve="all" />
   <assembly fullname="Fodinha.Online" preserve="all" />
   <assembly fullname="Newtonsoft.Json" preserve="all" />
+  <assembly fullname="Fodinha.Ads" preserve="all" />
+  <assembly fullname="GoogleMobileAds" preserve="all" />
+  <assembly fullname="GoogleMobileAds.Core" preserve="all" />
+  <assembly fullname="GoogleMobileAds.Common" preserve="all" />
+  <assembly fullname="GoogleMobileAds.Android" preserve="all" />
+  <assembly fullname="GoogleMobileAds.Ump" preserve="all" />
+  <assembly fullname="GoogleMobileAds.Ump.Android" preserve="all" />
 </linker>

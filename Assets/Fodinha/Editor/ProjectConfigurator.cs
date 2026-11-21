@@ -35,6 +35,7 @@ namespace Fodinha.EditorTools
             PlayerSettings.SplashScreen.show = false;
 
             IconBuilder.Apply();
+            AdMobConfigurator.Apply();
             AssetDatabase.SaveAssets();
             Debug.Log("[Fodinha] Projeto configurado: " + ProductName + " (" + AppIdentifier + "), retrato.");
         }

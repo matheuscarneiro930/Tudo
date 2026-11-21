@@ -125,6 +125,28 @@ namespace Fodinha.Game.UI
             }
         }
 
+        private bool matchOverShown;
+
+        /// <summary>Segundos mostrando o resultado antes do anúncio de fim de partida.</summary>
+        public const float EndOfMatchAdDelay = 2.5f;
+
+        /// <summary>Fim de partida: anúncio de tela cheia (no celular), depois de mostrar o resultado.</summary>
+        private void ShowEndOfMatchAd()
+        {
+            if (!Application.isPlaying || !isActiveAndEnabled)
+            {
+                Ads.AdService.ShowInterstitial();
+                return;
+            }
+            StartCoroutine(EndOfMatchAd());
+        }
+
+        private System.Collections.IEnumerator EndOfMatchAd()
+        {
+            yield return new WaitForSecondsRealtime(EndOfMatchAdDelay);
+            Ads.AdService.ShowInterstitial();
+        }
+
         private static System.Collections.IEnumerator DealSounds(int count)
         {
             for (int i = 0; i < count; i++)
@@ -265,8 +287,20 @@ namespace Fodinha.Game.UI
             else
                 roundPanel.Hide();
 
-            if (view.Phase == MatchPhase.MatchOver) matchOverPanel.Show(view, MenuRequested != null);
-            else matchOverPanel.Hide();
+            if (view.Phase == MatchPhase.MatchOver)
+            {
+                matchOverPanel.Show(view, MenuRequested != null);
+                if (!matchOverShown)
+                {
+                    matchOverShown = true;
+                    ShowEndOfMatchAd();
+                }
+            }
+            else
+            {
+                matchOverPanel.Hide();
+                matchOverShown = false;
+            }
 
             UpdateTimers();
         }

@@ -47,5 +47,8 @@ Você está recebendo o projeto **Fodinha Online** (Unity 6000.4.7f1 + C#, celul
 - Parte 2A ✅ economia: contas no servidor (Accounts.cs, AccountStore.cs), 500 moedas iniciais, salas valendo
   (RoomOptions.Stake), pote para o vencedor, recompensa +100 (provisória até o AdMob), ranking global.
   Banco: Postgres no Neon, configurado no Render pela variável DATABASE_URL (/health mostra "storage").
-- Próximas: 2B AdMob (vídeo premiado + fim de partida), 2C avatar estilo Memoji + loja com moedas,
+- Parte 2B ✅ AdMob (com.google.ads.mobile 11.7.0 via OpenUPM): Fodinha.Ads/AdMobService (UMP, vídeo premiado,
+  tela cheia no fim da partida), Game/Ads/AdService (interface + provisório no site/PC). IDs de TESTE em AdIds e
+  AdMobConfigurator até o dono criar a conta. BuildAndroid configura o App ID e resolve as dependências (EDM).
+- Próximas: 2C avatar estilo Memoji + loja com moedas,
   2D loja de acessórios com dinheiro real (Google Play Billing).

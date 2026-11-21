@@ -1,0 +1,21 @@
+{
+    "name": "Fodinha.Ads",
+    "rootNamespace": "Fodinha.Ads",
+    "references": [
+        "Fodinha.Game"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "GoogleMobileAds.dll",
+        "GoogleMobileAds.Core.dll",
+        "GoogleMobileAds.Common.dll",
+        "GoogleMobileAds.Ump.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

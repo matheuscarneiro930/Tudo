@@ -42,6 +42,21 @@ namespace Fodinha.Game.Tests
         }
 
         [Test]
+        public void Anuncios_ForaDoCelular_UsaServicoProvisorio()
+        {
+            Assert.That(Fodinha.Game.Ads.AdService.Current, Is.InstanceOf<Fodinha.Game.Ads.PlaceholderAdService>());
+            bool? earned = null;
+            Fodinha.Game.Ads.AdService.ShowRewarded(e => earned = e);
+            Assert.That(earned, Is.True, "Fora do Play Mode a recompensa provisória é imediata.");
+
+            bool closed = false;
+            int before = Fodinha.Game.Ads.AdService.InterstitialsRequested;
+            Fodinha.Game.Ads.AdService.ShowInterstitial(() => closed = true);
+            Assert.That(closed, Is.True, "Sem rede de anúncios, segue o jogo na hora.");
+            Assert.That(Fodinha.Game.Ads.AdService.InterstitialsRequested, Is.EqualTo(before + 1));
+        }
+
+        [Test]
         public void Botao_TocaClique()
         {
             var go = new GameObject("raiz", typeof(RectTransform));
