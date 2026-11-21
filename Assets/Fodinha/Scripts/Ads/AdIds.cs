@@ -7,8 +7,8 @@ namespace Fodinha.Ads
     public static class AdIds
     {
         // ---- IDs reais (preencher com os da conta AdMob do dono do jogo)
-        public const string AndroidRewardedReal = "";
-        public const string AndroidInterstitialReal = "";
+        public const string AndroidRewardedReal = "ca-app-pub-8252206953228177/5275693506";
+        public const string AndroidInterstitialReal = "ca-app-pub-8252206953228177/9647676640";
         public const string IosRewardedReal = "";
         public const string IosInterstitialReal = "";
 

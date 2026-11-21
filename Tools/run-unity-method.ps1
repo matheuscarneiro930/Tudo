@@ -4,6 +4,7 @@ param(
     [Parameter(Mandatory = $true)][string]$Method,
     [switch]$Graphics,
     [string]$Extra = "",
+    [string]$BuildTarget = "",
     [string]$Unity = "C:\Program Files\Unity\Hub\Editor\6000.4.7f1\Editor\Unity.exe"
 )
 
@@ -19,6 +20,8 @@ $log = Join-Path $outDir ("method-" + ($Method -replace '[^A-Za-z0-9]', '_') + "
 $unityArgs = @("-batchmode", "-quit", "-projectPath", "`"$project`"", "-executeMethod", $Method, "-logFile", "`"$log`"")
 if (-not $Graphics) { $unityArgs = @("-nographics") + $unityArgs }
 if ($Extra) { $unityArgs += $Extra }
+# Abre o Unity já na plataforma do build: scripts de Editor de plugins (ex.: AdMob) dependem dos defines dela.
+if ($BuildTarget) { $unityArgs = @("-buildTarget", $BuildTarget) + $unityArgs }
 
 $proc = Start-Process -FilePath $Unity -ArgumentList $unityArgs -PassThru
 $proc.WaitForExit()

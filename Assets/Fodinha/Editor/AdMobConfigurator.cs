@@ -12,7 +12,7 @@ namespace Fodinha.EditorTools
     public static class AdMobConfigurator
     {
         /// <summary>App IDs reais (preencher quando a conta AdMob existir). Vazio = App ID de teste do Google.</summary>
-        public const string AndroidAppIdReal = "";
+        public const string AndroidAppIdReal = "ca-app-pub-8252206953228177~9837967079";
         public const string IosAppIdReal = "";
 
         [MenuItem("Fodinha/Configurar AdMob")]

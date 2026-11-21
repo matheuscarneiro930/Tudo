@@ -103,8 +103,10 @@ namespace Fodinha.Ads
         {
             if (rewarded == null || !rewarded.CanShowAd())
             {
+                // Sem vídeo disponível (comum antes do app estar na loja): não deixa o jogador preso sem moedas.
+                // O servidor continua limitando a recompensa (só abaixo de 500 e com intervalo).
                 LoadRewarded();
-                onFinished(false);
+                new PlaceholderAdService().ShowRewarded(onFinished);
                 return;
             }
 
