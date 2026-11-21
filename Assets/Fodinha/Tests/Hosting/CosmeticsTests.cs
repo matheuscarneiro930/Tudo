@@ -11,7 +11,8 @@ namespace Fodinha.Hosting.Tests
         {
             var spec = new AvatarSpec
             {
-                [AvatarSpec.Part.Skin] = 5, [AvatarSpec.Part.Hair] = 7, [AvatarSpec.Part.Beard] = 3, [AvatarSpec.Part.Background] = 2
+                [AvatarSpec.Part.Skin] = 5, [AvatarSpec.Part.Hair] = 9, [AvatarSpec.Part.Beard] = 3, [AvatarSpec.Part.Background] = 2,
+                [AvatarSpec.Part.Earrings] = 2
             };
             var text = spec.Encode();
             Assert.That(text, Does.StartWith("1-"));
@@ -24,15 +25,26 @@ namespace Fodinha.Hosting.Tests
         [TestCase("")]
         [TestCase("abc")]
         [TestCase("2-0-0-0-0-0-0-0-0-0")]       // versão desconhecida
-        [TestCase("1-0-0-0-0-0-0-0-0")]         // faltando parte
-        [TestCase("1-0-0-0-0-0-0-0-0-0-0")]     // parte a mais
+        [TestCase("1-0-0-0-0-0-0-0-0")]         // faltando parte (menos que a 1ª versão)
+        [TestCase("1-0-0-0-0-0-0-0-0-0-0-0")]   // parte a mais
         [TestCase("1-6-0-0-0-0-0-0-0-0")]       // pele que não existe
+        [TestCase("1-0-0-0-0-0-0-0-0-0-9")]     // brinco que não existe
         [TestCase("1--1-0-0-0-0-0-0-0-0")]
         [TestCase("1-0-0-0-0-0-0-0-0-<b>")]
         public void TextoInvalido_EhRecusado(string text)
         {
             Assert.That(AvatarSpec.TryParse(text, out _), Is.False);
             Assert.That(AvatarSpec.Sanitize(text), Is.Empty);
+        }
+
+        [Test]
+        public void TextoDaVersaoAntiga_ContinuaValendo_ComPartesNovasZeradas()
+        {
+            Assert.That(AvatarSpec.TryParse("1-2-3-0-1-0-0-1-4-5", out var old), Is.True);
+            Assert.That(old[AvatarSpec.Part.Hair], Is.EqualTo(3));
+            Assert.That(old[AvatarSpec.Part.Background], Is.EqualTo(5));
+            Assert.That(old[AvatarSpec.Part.Earrings], Is.EqualTo(0));
+            Assert.That(AvatarSpec.Sanitize("1-2-3-0-1-0-0-1-4-5"), Is.EqualTo("1-2-3-0-1-0-0-1-4-5-0"));
         }
 
         [Test]

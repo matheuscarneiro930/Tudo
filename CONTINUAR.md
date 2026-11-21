@@ -64,5 +64,11 @@ Você está recebendo o projeto **Fodinha Online** (Unity 6000.4.7f1 + C#, celul
   - Código VIP (conta sem anúncios): variável VIP_CODE no Render (mín. 6 caracteres; nunca no código).
     Configurações → Código VIP → redeem_code; 5 erros = bloqueio de 10 min. `GamePrefs.NoAds` pula os anúncios.
   - Revisar avatares: `-Method Fodinha.EditorTools.AvatarSheet.ExportFromCommandLine -Extra "-sheetPath <png>"`.
+  - Avatar com volume (luz 3D por "normais", cabelo com brilho, olhos com cílios, lábios), brincos e cabelos
+    Chanel/Rabo de cavalo. Partes novas do AvatarSpec entram SEMPRE no fim: textos antigos (9 partes) seguem válidos.
+    Óculos ficaram de fora de propósito: serão acessório pago (2D).
+  - Assento do adversário: avatar fora do quadrado (à esquerda), aposta numa plaquinha amarela grande,
+    rodada cega mostra a carta "na testa" (em cima do avatar).
+- Decidido pelo dono: mesas e baralhos serão vendidos SÓ com dinheiro de verdade (na 2D); moedas ficam para apostas.
 - Próxima: 2D loja de acessórios com dinheiro real (Google Play Billing) — pode incluir "remover anúncios"
   (já existe o campo NoAds na conta).

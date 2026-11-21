@@ -132,6 +132,16 @@ namespace Fodinha.Game.Tests
             Assert.That(screen.Hand.VisibleCardCount, Is.EqualTo(1));
             foreach (var p in view.Players)
                 if (p.Seat != view.ViewerSeat) Assert.That(p.VisibleCards.Count, Is.EqualTo(1));
+
+            // Assentos: carta "na testa" à mostra e a aposta na plaquinha (número, ou "?" se ainda não apostou).
+            screen.Render(view);
+            foreach (var seat in screen.Table.Seats)
+            {
+                if (!seat.gameObject.activeSelf) continue;
+                var p = view.Players[seat.Seat];
+                Assert.That(seat.ShowsForeheadCard, Is.True);
+                Assert.That(seat.ShownBet, Is.EqualTo(p.HasBet ? p.Bet.ToString() : "?"));
+            }
         }
 
         [Test]

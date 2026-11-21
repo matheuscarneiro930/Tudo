@@ -67,7 +67,8 @@ namespace Fodinha.EditorTools
         {
             var s = new AvatarSpec();
             s[AvatarSpec.Part.Skin] = i % 6;
-            s[AvatarSpec.Part.Hair] = i % 8;
+            s[AvatarSpec.Part.Hair] = i % AvatarSpec.OptionCount(AvatarSpec.Part.Hair);
+            s[AvatarSpec.Part.Earrings] = (i / 3) % AvatarSpec.OptionCount(AvatarSpec.Part.Earrings);
             s[AvatarSpec.Part.HairColor] = (i * 3) % 8;
             s[AvatarSpec.Part.Eyes] = i % 5;
             s[AvatarSpec.Part.EyeColor] = i % 4;

@@ -25,8 +25,9 @@ namespace Fodinha.Game.UI
         private Image heartIcon;
         private Text livesText;
         private Text betText;
-        private CardView miniCard;
-        private Text countText;
+        private CardView foreheadCard;   // rodada cega: a carta do adversário, "na testa" (em cima do avatar)
+        private Image betBadge;          // aposta em destaque (amarelo, número grande)
+        private Text betNumber;
         private Text betCaption;
         private Image dealerChip;
         private TimerBar timer;
@@ -73,7 +74,7 @@ namespace Fodinha.Game.UI
             outline.rectTransform.Fill();
 
             nameText = UiKit.Label("Nome", box, "", 34, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
-            nameText.rectTransform.Anchor(0.06f, 0.68f, 0.62f, 0.97f);
+            nameText.rectTransform.Anchor(0.06f, 0.68f, 0.6f, 0.97f);
 
             // Vidas: coração desenhado + número (o símbolo ♥ da fonte não aparece no navegador).
             heartIcon = UiKit.Image("Coracao", box, Palette.Heart, SpriteFactory.Suit(Suit.Hearts));
@@ -81,25 +82,25 @@ namespace Fodinha.Game.UI
             heartIcon.raycastTarget = false;
             heartIcon.rectTransform.Anchor(0.06f, 0.42f, 0.2f, 0.66f);
             livesText = UiKit.Label("Vidas", box, "", 34, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
-            livesText.rectTransform.Anchor(0.22f, 0.40f, 0.6f, 0.68f);
+            livesText.rectTransform.Anchor(0.22f, 0.40f, 0.58f, 0.68f);
 
-            betText = UiKit.Label("Fez", box, "", 28, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Normal, true);
-            betText.rectTransform.Anchor(0.06f, 0.04f, 0.62f, 0.38f);
+            betText = UiKit.Label("Fez", box, "", 30, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Normal, true);
+            betText.rectTransform.Anchor(0.06f, 0.04f, 0.6f, 0.38f);
 
-            // Carta à direita: mostra a APOSTA do jogador (na rodada cega, a carta dele).
-            miniCard = CardView.Create(box, "Aposta");
-            miniCard.Rect.Place(new Vector2(0.80f, 0.6f), MiniCardSize);
-            miniCard.SetShadow(false);
-            miniCard.SetInteractable(false);
+            // APOSTA em destaque: plaquinha amarela com o número bem grande, à direita do quadrado.
+            betBadge = UiKit.Image("Aposta", box, Palette.Accent, SpriteFactory.RoundedRect, 1.6f);
+            betBadge.raycastTarget = false;
+            betBadge.rectTransform.Anchor(0.61f, 0.06f, 0.97f, 0.94f);
+            betCaption = UiKit.Label("Legenda", betBadge.transform, "APOSTA", 22, Palette.AccentDark, TextAnchor.MiddleCenter, FontStyle.Bold, true);
+            betCaption.rectTransform.Anchor(0.04f, 0.74f, 0.96f, 0.97f);
+            betNumber = UiKit.Label("Numero", betBadge.transform, "?", 84, Palette.AccentDark, TextAnchor.MiddleCenter, FontStyle.Bold, true);
+            betNumber.rectTransform.Anchor(0f, 0.0f, 1f, 0.8f);
 
-            betCaption = UiKit.Label("Legenda", box, "aposta", 22, Palette.TextMuted, TextAnchor.MiddleCenter, FontStyle.Normal, true);
-            betCaption.rectTransform.Anchor(0.6f, 0.0f, 1.0f, 0.22f);
-
-            countText = UiKit.Label("Numero", miniCard.Rect, "", 54, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold, true);
-            countText.rectTransform.Fill();
-            var countOutline = countText.gameObject.AddComponent<Outline>();
-            countOutline.effectColor = new Color(0f, 0f, 0f, 0.8f);
-            countOutline.effectDistance = new Vector2(2f, -2f);
+            // Rodada cega: a carta do adversário aparece "na testa", em cima do avatar.
+            foreheadCard = CardView.Create(rt, "CartaNaTesta");
+            foreheadCard.Rect.Place(new Vector2(AvatarSize * 0.5f / BaseSize.x, 0.56f), MiniCardSize);
+            foreheadCard.SetInteractable(false);
+            foreheadCard.gameObject.SetActive(false);
 
             // Distribuidor: ficha no canto de baixo do avatar.
             dealerChip = UiKit.Image("Distribuidor", rt, Palette.Accent, SpriteFactory.Circle);
@@ -137,41 +138,41 @@ namespace Fodinha.Game.UI
                 livesText.text = "0";
                 betText.text = "Eliminado";
                 betText.color = Palette.TextMuted;
-                miniCard.gameObject.SetActive(false);
-                betCaption.gameObject.SetActive(false);
+                foreheadCard.gameObject.SetActive(false);
+                betBadge.gameObject.SetActive(false);
                 return;
             }
 
             livesText.text = p.Lives.ToString();
             betText.text = WonLine(p);
             betText.color = Palette.Text;
-            betCaption.gameObject.SetActive(true);
+            betBadge.gameObject.SetActive(true);
+            betNumber.text = p.HasBet ? p.Bet.ToString() : "?";
+            betBadge.color = p.HasBet ? Palette.Accent : new Color(Palette.Accent.r, Palette.Accent.g, Palette.Accent.b, 0.45f);
 
             // Animações: aposta feita "pula"; vaza ganha também.
-            if (p.HasBet && lastBet != p.Bet) Tweens.Scale(betText.rectTransform, new Vector3(1.35f, 1.35f, 1f), Vector3.one, 0.35f);
+            if (p.HasBet && lastBet != p.Bet) Tweens.Scale(betBadge.rectTransform, new Vector3(1.3f, 1.3f, 1f), Vector3.one, 0.35f);
             else if (p.HasBet && p.TricksWon > lastTricks) Tweens.Scale(betText.rectTransform, new Vector3(1.25f, 1.25f, 1f), Vector3.one, 0.3f);
             if (p.Lives < lastLives && lastLives >= 0) Tweens.Scale(livesText.rectTransform, new Vector3(1.5f, 1.5f, 1f), Vector3.one, 0.45f);
             lastBet = p.Bet;
             lastTricks = p.TricksWon;
             lastLives = p.Lives;
 
-            string bet = p.HasBet ? p.Bet.ToString() : "?";
-            miniCard.gameObject.SetActive(true);
-            if (p.VisibleCards.Count > 0)
+            // Rodada cega: o local enxerga a carta "na testa" deste adversário.
+            bool blind = p.VisibleCards.Count > 0;
+            foreheadCard.gameObject.SetActive(blind);
+            if (blind)
             {
-                // Rodada cega: o local enxerga a carta "na testa" deste adversário; a aposta vai na legenda.
                 var card = p.VisibleCards[0];
-                miniCard.ShowFace(card, view.Comparer != null && view.Comparer.IsManilha(card));
-                countText.text = "";
-                betCaption.text = "aposta " + bet;
-            }
-            else
-            {
-                miniCard.ShowBack();
-                countText.text = bet;
-                betCaption.text = "aposta";
+                foreheadCard.ShowFace(card, view.Comparer != null && view.Comparer.IsManilha(card));
             }
         }
+
+        /// <summary>Aposta mostrada na plaquinha ("?" enquanto não apostou).</summary>
+        public string ShownBet => betBadge.gameObject.activeSelf ? betNumber.text : "";
+
+        /// <summary>Carta da testa à mostra (só na rodada cega).</summary>
+        public bool ShowsForeheadCard => foreheadCard.gameObject.activeSelf;
 
         /// <summary>Avatar do jogador deste assento (vazio = sorteado pelo nome).</summary>
         public void SetAvatar(string encoded, string seed) => avatar.Show(encoded, seed);

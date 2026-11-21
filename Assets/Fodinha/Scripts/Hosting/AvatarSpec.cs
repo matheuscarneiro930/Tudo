@@ -15,18 +15,22 @@ namespace Fodinha.Hosting
         /// <summary>Tamanho máximo aceito do texto (proteção do servidor).</summary>
         public const int MaxEncodedLength = 48;
 
-        public enum Part { Skin, Hair, HairColor, Eyes, EyeColor, Mouth, Beard, Shirt, Background }
+        /// <summary>Partes novas entram SEMPRE no fim (textos antigos continuam valendo: o que faltar vira 0).</summary>
+        public enum Part { Skin, Hair, HairColor, Eyes, EyeColor, Mouth, Beard, Shirt, Background, Earrings }
 
         public static readonly int PartCount = Enum.GetValues(typeof(Part)).Length;
 
+        /// <summary>Quantas partes tinha a 1ª versão do avatar (mínimo aceito num texto).</summary>
+        public const int OriginalPartCount = 9;
+
         /// <summary>Nome de cada parte e de cada opção (o número da opção é a posição na lista).</summary>
         public static readonly string[] PartLabels =
-            { "Pele", "Cabelo", "Cor do cabelo", "Olhos", "Cor dos olhos", "Boca", "Barba", "Camiseta", "Fundo" };
+            { "Pele", "Cabelo", "Cor do cabelo", "Olhos", "Cor dos olhos", "Boca", "Barba", "Camiseta", "Fundo", "Brincos" };
 
         public static readonly string[][] OptionLabels =
         {
             new[] { "Muito clara", "Clara", "Média", "Morena", "Escura", "Bem escura" },
-            new[] { "Careca", "Curto", "Topete", "Cacheado", "Longo", "Coque", "Moicano", "Franja" },
+            new[] { "Careca", "Curto", "Topete", "Cacheado", "Longo", "Coque", "Moicano", "Franja", "Chanel", "Rabo de cavalo" },
             new[] { "Preto", "Castanho escuro", "Castanho", "Loiro", "Ruivo", "Grisalho", "Azul", "Rosa" },
             new[] { "Normais", "Grandes", "Felizes", "Sonolentos", "Piscando" },
             new[] { "Castanhos", "Pretos", "Verdes", "Azuis" },
@@ -34,6 +38,7 @@ namespace Fodinha.Hosting
             new[] { "Sem barba", "Cavanhaque", "Bigode", "Barba cheia" },
             new[] { "Azul", "Vermelha", "Verde", "Amarela", "Roxa", "Preta", "Branca", "Laranja" },
             new[] { "Azul", "Verde", "Rosa", "Amarelo", "Roxo", "Laranja", "Cinza", "Turquesa" },
+            new[] { "Sem brinco", "Bolinha dourada", "Argola", "Pérola" },
         };
 
         private readonly int[] values = new int[PartCount];
@@ -76,9 +81,10 @@ namespace Fodinha.Hosting
             spec = null;
             if (string.IsNullOrEmpty(text) || text.Length > MaxEncodedLength) return false;
             var parts = text.Split('-');
-            if (parts.Length != PartCount + 1 || parts[0] != FormatVersion.ToString()) return false;
+            int count = parts.Length - 1;
+            if (count < OriginalPartCount || count > PartCount || parts[0] != FormatVersion.ToString()) return false;
             var result = new AvatarSpec();
-            for (int i = 0; i < PartCount; i++)
+            for (int i = 0; i < count; i++)
             {
                 if (!int.TryParse(parts[i + 1], out int v)) return false;
                 if (v < 0 || v >= OptionCount((Part)i)) return false;
@@ -107,6 +113,7 @@ namespace Fodinha.Hosting
             // Cores "fantasia" de cabelo e barba ficam mais raras nos bots.
             if (spec[Part.HairColor] >= 6 && (Next(h) & 3) != 0) spec[Part.HairColor] = (int)(Next(h ^ 0x9E37u) % 5u);
             if (spec[Part.Beard] > 0 && (Next(h ^ 0x51EDu) & 1) == 0) spec[Part.Beard] = 0;
+            if (spec[Part.Earrings] > 0 && (Next(h ^ 0x7A3Bu) & 1) == 0) spec[Part.Earrings] = 0;
             return spec;
         }
 
