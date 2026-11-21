@@ -42,3 +42,10 @@ Você está recebendo o projeto **Fodinha Online** (Unity 6000.4.7f1 + C#, celul
 4. Multiplayer (modo Host): salas públicas/privadas com código de 6 caracteres, lobby, host roda `MatchDirector`,
    clientes enviam pedidos e recebem só `BuildView(assento)`; timer, reconexão, bot no lugar de quem caiu.
 5. Polimento (animações, sons, layout responsivo, ícone). 6. Build Android (.apk).
+- Parte 1 (ajustes do dono) ✅ naipes desenhados (SpriteFactory.Suit), vira no meio, "vaza" → "rodada", aposta na
+  carta dos adversários, vidas em número, 3 vidas fixas, 30 s para apostar (RuleSet.BetTimeSeconds), 5 min para voltar.
+- Parte 2A ✅ economia: contas no servidor (Accounts.cs, AccountStore.cs), 500 moedas iniciais, salas valendo
+  (RoomOptions.Stake), pote para o vencedor, recompensa +100 (provisória até o AdMob), ranking global.
+  Banco: Postgres no Neon, configurado no Render pela variável DATABASE_URL (/health mostra "storage").
+- Próximas: 2B AdMob (vídeo premiado + fim de partida), 2C avatar estilo Memoji + loja com moedas,
+  2D loja de acessórios com dinheiro real (Google Play Billing).
