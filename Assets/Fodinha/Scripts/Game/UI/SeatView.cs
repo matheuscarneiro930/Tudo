@@ -10,13 +10,14 @@ namespace Fodinha.Game.UI
     /// </summary>
     public sealed class SeatView : MonoBehaviour
     {
-        public static readonly Vector2 BaseSize = new Vector2(210f, 150f);
+        public static readonly Vector2 BaseSize = new Vector2(232f, 150f);
 
         private CanvasGroup group;
         private Image glow;
         private Image panel;
         private Image outline;
         private Text nameText;
+        private AvatarView avatar;
         private Image heartIcon;
         private Text livesText;
         private Text betText;
@@ -60,16 +61,19 @@ namespace Fodinha.Game.UI
             outline = UiKit.Image("Contorno", rt, Palette.Accent, SpriteFactory.RoundedOutline, 1.6f);
             outline.rectTransform.Fill();
 
+            avatar = AvatarView.Create(rt, "Avatar");
+            avatar.Image.rectTransform.Anchor(0.015f, 0.36f, 0.33f, 0.985f);
+
             nameText = UiKit.Label("Nome", rt, "", 34, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
-            nameText.rectTransform.Anchor(0.06f, 0.68f, 0.72f, 0.97f);
+            nameText.rectTransform.Anchor(0.35f, 0.68f, 0.75f, 0.97f);
 
             // Vidas: coração desenhado + número (o símbolo ♥ da fonte não aparece no navegador).
             heartIcon = UiKit.Image("Coracao", rt, Palette.Heart, SpriteFactory.Suit(Suit.Hearts));
             heartIcon.preserveAspect = true;
             heartIcon.raycastTarget = false;
-            heartIcon.rectTransform.Anchor(0.05f, 0.42f, 0.19f, 0.66f);
+            heartIcon.rectTransform.Anchor(0.35f, 0.42f, 0.46f, 0.66f);
             livesText = UiKit.Label("Vidas", rt, "", 34, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
-            livesText.rectTransform.Anchor(0.21f, 0.40f, 0.70f, 0.68f);
+            livesText.rectTransform.Anchor(0.48f, 0.40f, 0.74f, 0.68f);
 
             betText = UiKit.Label("Fez", rt, "", 28, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Normal, true);
             betText.rectTransform.Anchor(0.05f, 0.04f, 0.70f, 0.38f);
@@ -90,7 +94,7 @@ namespace Fodinha.Game.UI
             countOutline.effectDistance = new Vector2(2f, -2f);
 
             dealerChip = UiKit.Image("Distribuidor", rt, Palette.Accent, SpriteFactory.Circle);
-            dealerChip.rectTransform.Place(new Vector2(0f, 1f), new Vector2(46f, 46f), new Vector2(2f, -2f));
+            dealerChip.rectTransform.Place(new Vector2(0.29f, 0.42f), new Vector2(42f, 42f));
             var d = UiKit.Label("D", dealerChip.transform, "D", 30, Palette.AccentDark, TextAnchor.MiddleCenter, FontStyle.Bold);
             d.rectTransform.Fill();
 
@@ -159,6 +163,11 @@ namespace Fodinha.Game.UI
                 betCaption.text = "aposta";
             }
         }
+
+        /// <summary>Avatar do jogador deste assento (vazio = sorteado pelo nome).</summary>
+        public void SetAvatar(string encoded, string seed) => avatar.Show(encoded, seed);
+
+        public string ShownAvatar => avatar.Current;
 
         /// <summary>Quantas rodadas o adversário já fez (verde se bateu a aposta, vermelho se passou).</summary>
         public static string WonLine(PlayerView p)

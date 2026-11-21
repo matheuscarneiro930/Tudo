@@ -108,7 +108,8 @@ namespace Fodinha.EditorTools
                 Fodinha.Game.Menu.MenuScreen.Page.Home, Fodinha.Game.Menu.MenuScreen.Page.Offline,
                 Fodinha.Game.Menu.MenuScreen.Page.CreateRoom, Fodinha.Game.Menu.MenuScreen.Page.JoinRoom,
                 Fodinha.Game.Menu.MenuScreen.Page.PublicRooms, Fodinha.Game.Menu.MenuScreen.Page.Settings,
-                Fodinha.Game.Menu.MenuScreen.Page.HowToPlay, Fodinha.Game.Menu.MenuScreen.Page.Ranking
+                Fodinha.Game.Menu.MenuScreen.Page.HowToPlay, Fodinha.Game.Menu.MenuScreen.Page.Ranking,
+                Fodinha.Game.Menu.MenuScreen.Page.Avatar, Fodinha.Game.Menu.MenuScreen.Page.Shop
             };
             for (int i = 0; i < pages.Length; i++)
             {
@@ -119,6 +120,7 @@ namespace Fodinha.EditorTools
                     menu.ShowPage(page);
                     if (page == Fodinha.Game.Menu.MenuScreen.Page.JoinRoom) menu.CodeField.text = "k7m2q";
                     if (page == Fodinha.Game.Menu.MenuScreen.Page.Home) menu.SetCoins(350, true);
+                    if (page == Fodinha.Game.Menu.MenuScreen.Page.Shop) menu.SetCoins(1250, false);
                     if (page == Fodinha.Game.Menu.MenuScreen.Page.Ranking)
                         menu.ShowRanking(new[]
                         {

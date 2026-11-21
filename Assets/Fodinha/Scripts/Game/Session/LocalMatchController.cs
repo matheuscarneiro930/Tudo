@@ -53,6 +53,14 @@ namespace Fodinha.Game
         public float TurnTimeTotal => director != null ? director.TurnTimeTotal : 1f;
         public float PhaseWaitRemaining => director != null ? director.PhaseWaitRemaining : 0f;
 
+        /// <summary>Jogador: o avatar dele. Bots: sorteado pelo nome (sempre o mesmo para o mesmo bot).</summary>
+        public string AvatarOf(int seat)
+        {
+            if (seat == HumanSeat) return GamePrefs.Avatar;
+            var name = view != null && seat >= 0 && seat < view.Players.Count ? view.Players[seat].Name : "bot" + seat;
+            return AvatarSpec.FromSeed(name).Encode();
+        }
+
         private void Start()
         {
             if (!startAutomatically || director != null) return;

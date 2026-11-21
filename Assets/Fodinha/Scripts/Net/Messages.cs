@@ -12,6 +12,8 @@ namespace Fodinha.Net
         /// <summary>Token secreto do jogador (para reconectar e recuperar o lugar na sala). Vazio na 1ª vez.</summary>
         public string token;
         public int version;
+        /// <summary>Avatar escolhido no aparelho (<see cref="AvatarSpec"/> em texto). Vazio = o servidor sorteia.</summary>
+        public string avatar;
     }
 
     public sealed class WelcomeMsg
@@ -34,6 +36,32 @@ namespace Fodinha.Net
         public string reason;
         /// <summary>Pode ganhar moedas assistindo um vídeo (tem menos que o mínimo).</summary>
         public bool canClaimReward;
+        /// <summary>Avatar salvo na conta.</summary>
+        public string avatar;
+        /// <summary>Itens comprados na loja (os grátis não aparecem: são de todos).</summary>
+        public List<string> owned = new List<string>();
+        /// <summary>Mesa e baralho em uso.</summary>
+        public string table;
+        public string deck;
+        /// <summary>Conta sem anúncios (código VIP).</summary>
+        public bool noAds;
+    }
+
+    /// <summary>Código VIP digitado nas Configurações.</summary>
+    public sealed class CodeMsg
+    {
+        public string code;
+    }
+
+    public sealed class AvatarMsg
+    {
+        public string avatar;
+    }
+
+    /// <summary>Comprar ou usar um item da loja (<see cref="ShopCatalog"/>).</summary>
+    public sealed class ItemMsg
+    {
+        public string item;
     }
 
     public sealed class RankEntry
@@ -110,6 +138,7 @@ namespace Fodinha.Net
         public bool bot;
         public bool connected;
         public bool owner;
+        public string avatar;
     }
 
     /// <summary>Estado da sala visto por um jogador.</summary>
@@ -141,6 +170,8 @@ namespace Fodinha.Net
         public float turnTotal;
         public float phaseWait;
         public List<EventDto> events = new List<EventDto>();
+        /// <summary>Avatar de cada assento (posição = assento).</summary>
+        public List<string> avatars = new List<string>();
     }
 
     public sealed class EventDto

@@ -180,11 +180,15 @@ namespace Fodinha.Online
         private void AddPlayerRow(MemberDto m, int index, bool iAmOwner, string you)
         {
             var row = UiKit.Image("Jogador_" + index, playersList, Palette.Panel, SpriteFactory.RoundedRect, 1.5f);
-            UiControls.SetHeight(row, 96f);
+            UiControls.SetHeight(row, 112f);
+
+            var avatar = AvatarView.Create(row.transform, "Avatar");
+            avatar.Image.rectTransform.Anchor(0.015f, 0.06f, 0.135f, 0.94f);
+            avatar.Show(m.avatar, m.name);
 
             string name = m.name + (m.id == you ? UiKit.Colored("  (você)", Palette.Accent) : "");
             var nameText = UiKit.Label("Nome", row.transform, name, 40, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
-            nameText.rectTransform.Anchor(0.04f, 0.1f, 0.62f, 0.9f);
+            nameText.rectTransform.Anchor(0.15f, 0.1f, 0.62f, 0.9f);
 
             string tag = m.owner ? UiKit.Colored("dono", Palette.Accent)
                        : m.bot ? UiKit.Colored("bot", Palette.TextMuted)

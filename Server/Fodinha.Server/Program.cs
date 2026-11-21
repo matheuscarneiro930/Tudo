@@ -51,6 +51,9 @@ namespace Fodinha.Server
 
             var serverOptions = options ?? new ServerOptions();
             if (Environment.GetEnvironmentVariable("FODINHA_PACING") == "instant") serverOptions.Pacing = PacingSettings.Instant;
+            // Código VIP (conta sem anúncios): só no painel do Render, nunca no código nem no app.
+            string vip = Environment.GetEnvironmentVariable("VIP_CODE");
+            if (!string.IsNullOrWhiteSpace(vip)) serverOptions.VipCode = vip;
 
             // Contas: Postgres (variável DATABASE_URL) ou memória (desenvolvimento/testes).
             string databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");

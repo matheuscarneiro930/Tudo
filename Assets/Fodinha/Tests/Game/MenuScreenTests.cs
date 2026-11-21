@@ -158,15 +158,22 @@ namespace Fodinha.Game.Tests
             Assert.That(menu.ShownCoins, Is.Null);
             Assert.That(menu.ClaimVisible, Is.False);
 
-            menu.SetCoins(1500, false);
-            Assert.That(menu.ShownCoins, Is.EqualTo(1500));
-            Assert.That(menu.ClaimVisible, Is.False, "Com 500 ou mais não aparece.");
-
-            menu.SetCoins(200, true);
-            Assert.That(menu.ClaimVisible, Is.True);
             bool claimed = false;
             menu.ClaimRewardRequested += () => claimed = true;
-            menu.transform.Find("AreaSegura/Pagina_Home/Ganhar").GetComponent<Button>().onClick.Invoke();
+            var claim = menu.transform.Find("AreaSegura/Pagina_Home/Ganhar").GetComponent<Button>();
+            Assert.That(UiKit.ButtonLabel(claim).text, Is.EqualTo("+100 moedas"));
+
+            menu.SetCoins(1500, false);
+            Assert.That(menu.ShownCoins, Is.EqualTo(1500));
+            Assert.That(menu.ClaimVisible, Is.True, "O botão fica sempre à vista na tela inicial.");
+            Assert.That(menu.ClaimAvailable, Is.False, "Com 500 ou mais ele fica apagado.");
+            claim.onClick.Invoke();
+            Assert.That(claimed, Is.False);
+            Assert.That(menu.LastToast, Does.Contain("menos de 500"));
+
+            menu.SetCoins(200, true);
+            Assert.That(menu.ClaimAvailable, Is.True);
+            claim.onClick.Invoke();
             Assert.That(claimed, Is.True);
             Assert.That(MenuScreen.FormatCoins(12345), Is.EqualTo("12.345"));
         }

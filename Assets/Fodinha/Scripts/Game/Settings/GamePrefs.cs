@@ -129,6 +129,101 @@ namespace Fodinha.Game
             set => SaveJson(KeyRoomOptions, value);
         }
 
+        // ------------------------------------------------------------------ avatar e loja
+
+        private const string KeyAvatar = "fodinha.avatar";
+        private const string KeyTable = "fodinha.mesa";
+        private const string KeyDeck = "fodinha.baralho";
+        private const string KeyOwned = "fodinha.itens";
+        private const string KeyNoAds = "fodinha.semanuncios";
+
+        /// <summary>Muda quando o avatar, a mesa ou o baralho mudam (para as telas se redesenharem).</summary>
+        public static event Action CosmeticsChanged;
+
+        /// <summary>
+        /// Avatar do jogador (texto do <see cref="AvatarSpec"/>). Na primeira vez sorteia um e guarda.
+        /// Fica no aparelho e é enviado ao servidor para os outros verem.
+        /// </summary>
+        public static string Avatar
+        {
+            get
+            {
+                var saved = PlayerPrefs.GetString(KeyAvatar, "");
+                if (AvatarSpec.TryParse(saved, out _)) return saved;
+                var fresh = AvatarSpec.Random(new System.Random()).Encode();
+                PlayerPrefs.SetString(KeyAvatar, fresh);
+                PlayerPrefs.Save();
+                return fresh;
+            }
+            set
+            {
+                var clean = AvatarSpec.Sanitize(value);
+                if (clean.Length == 0 || clean == PlayerPrefs.GetString(KeyAvatar, "")) return;
+                PlayerPrefs.SetString(KeyAvatar, clean);
+                PlayerPrefs.Save();
+                CosmeticsChanged?.Invoke();
+            }
+        }
+
+        /// <summary>Mesa em uso (item da loja).</summary>
+        public static string TableTheme
+        {
+            get => ShopCatalog.ValidEquipped(ShopCategory.Table, PlayerPrefs.GetString(KeyTable, ""), OwnedItems);
+            set => SetEquipped(KeyTable, ShopCategory.Table, value);
+        }
+
+        /// <summary>Baralho (verso das cartas) em uso.</summary>
+        public static string DeckTheme
+        {
+            get => ShopCatalog.ValidEquipped(ShopCategory.Deck, PlayerPrefs.GetString(KeyDeck, ""), OwnedItems);
+            set => SetEquipped(KeyDeck, ShopCategory.Deck, value);
+        }
+
+        private static void SetEquipped(string key, ShopCategory category, string id)
+        {
+            var valid = ShopCatalog.ValidEquipped(category, id, OwnedItems);
+            if (valid == PlayerPrefs.GetString(key, "")) return;
+            PlayerPrefs.SetString(key, valid);
+            PlayerPrefs.Save();
+            CosmeticsChanged?.Invoke();
+        }
+
+        /// <summary>Itens comprados (cópia do que o servidor informou; quem decide é o servidor).</summary>
+        public static System.Collections.Generic.List<string> OwnedItems
+        {
+            get => SplitIds(PlayerPrefs.GetString(KeyOwned, ""));
+            set
+            {
+                PlayerPrefs.SetString(KeyOwned, value == null ? "" : string.Join(",", value));
+                PlayerPrefs.Save();
+            }
+        }
+
+        private static System.Collections.Generic.List<string> SplitIds(string text)
+        {
+            var list = new System.Collections.Generic.List<string>();
+            if (string.IsNullOrEmpty(text)) return list;
+            foreach (var id in text.Split(','))
+                if (ShopCatalog.Find(id) != null && !list.Contains(id)) list.Add(id);
+            return list;
+        }
+
+        /// <summary>Conta sem anúncios (código VIP). Guardado aqui para valer também no modo offline.</summary>
+        public static bool NoAds
+        {
+            get => PlayerPrefs.GetInt(KeyNoAds, 0) == 1;
+            set { PlayerPrefs.SetInt(KeyNoAds, value ? 1 : 0); PlayerPrefs.Save(); }
+        }
+
+        /// <summary>Aplica o que o servidor mandou no perfil: itens, mesa, baralho e "sem anúncios".</summary>
+        public static void ApplyServerProfile(System.Collections.Generic.List<string> owned, string table, string deck, bool noAds)
+        {
+            OwnedItems = owned;
+            NoAds = noAds;
+            if (!string.IsNullOrEmpty(table)) TableTheme = table;
+            if (!string.IsNullOrEmpty(deck)) DeckTheme = deck;
+        }
+
         /// <summary>Nome sem espaços nas pontas, sem rich text e com no máximo <see cref="MaxNameLength"/> caracteres.</summary>
         public static string SanitizeName(string name)
         {

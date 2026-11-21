@@ -38,6 +38,10 @@ namespace Fodinha.Net
             public const string GetProfile = "get_profile";
             public const string GetRanking = "get_ranking";
             public const string ClaimReward = "claim_reward";
+            public const string SetAvatar = "set_avatar";
+            public const string BuyItem = "buy_item";
+            public const string EquipItem = "equip_item";
+            public const string RedeemCode = "redeem_code";
         }
 
         /// <summary>Mensagens do servidor para o cliente.</summary>
@@ -124,5 +128,7 @@ namespace Fodinha.Net
         public const string ServerFull = "server_full";
         public const string NotEnoughCoins = "not_enough_coins";
         public const string RewardUnavailable = "reward_unavailable";
+        public const string Shop = "shop";
+        public const string Code = "code";
     }
 }

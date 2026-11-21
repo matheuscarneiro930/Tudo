@@ -51,6 +51,7 @@ namespace Fodinha.Game.Ads
 
         public static void ShowRewarded(Action<bool> onFinished)
         {
+            if (GamePrefs.NoAds) { onFinished?.Invoke(true); return; } // conta VIP: sem anúncios
             EnsureInitialized();
             Current.ShowRewarded(onFinished ?? (_ => { }));
         }
@@ -59,6 +60,7 @@ namespace Fodinha.Game.Ads
         public static void ShowInterstitial(Action onClosed = null)
         {
             InterstitialsRequested++;
+            if (GamePrefs.NoAds) { onClosed?.Invoke(); return; } // conta VIP: sem anúncios
             EnsureInitialized();
             Current.ShowInterstitial(onClosed ?? (() => { }));
         }

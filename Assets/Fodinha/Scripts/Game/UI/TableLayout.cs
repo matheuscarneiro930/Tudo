@@ -51,9 +51,9 @@ namespace Fodinha.Game.UI
         public static float SeatScale(int opponents)
         {
             if (opponents <= 4) return 1f;
-            if (opponents <= 7) return 0.88f;
-            if (opponents <= 10) return 0.76f;
-            return 0.66f;
+            if (opponents <= 7) return 0.8f;
+            if (opponents <= 10) return 0.7f;
+            return 0.6f;
         }
 
         /// <summary>Altura das cartas da vaza no centro, conforme a lotação.</summary>

@@ -87,7 +87,12 @@ create table if not exists accounts (
   wins integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
-);";
+);
+alter table accounts add column if not exists avatar text not null default '';
+alter table accounts add column if not exists owned text not null default '';
+alter table accounts add column if not exists table_theme text not null default '';
+alter table accounts add column if not exists deck_theme text not null default '';
+alter table accounts add column if not exists no_ads boolean not null default false;";
             await using var cmd = new NpgsqlCommand(sql, conn);
             await cmd.ExecuteNonQueryAsync(ct);
         }
@@ -98,11 +103,12 @@ create table if not exists accounts (
             await conn.OpenAsync(ct);
             await EnsureTableAsync(conn, ct);
             var list = new List<Account>();
-            await using var cmd = new NpgsqlCommand("select id, token_hash, name, coins, games, wins, created_at, updated_at from accounts", conn);
+            await using var cmd = new NpgsqlCommand(
+                "select id, token_hash, name, coins, games, wins, created_at, updated_at, avatar, owned, table_theme, deck_theme, no_ads from accounts", conn);
             await using var r = await cmd.ExecuteReaderAsync(ct);
             while (await r.ReadAsync(ct))
             {
-                list.Add(new Account
+                var a = new Account
                 {
                     Id = r.GetString(0),
                     TokenHash = r.GetString(1),
@@ -111,8 +117,14 @@ create table if not exists accounts (
                     Games = r.GetInt32(4),
                     Wins = r.GetInt32(5),
                     CreatedAt = r.GetDateTime(6),
-                    UpdatedAt = r.GetDateTime(7)
-                });
+                    UpdatedAt = r.GetDateTime(7),
+                    Avatar = Fodinha.Hosting.AvatarSpec.Sanitize(r.GetString(8)),
+                    Owned = SplitOwned(r.GetString(9)),
+                    NoAds = r.GetBoolean(12)
+                };
+                a.TableTheme = Fodinha.Hosting.ShopCatalog.ValidEquipped(Fodinha.Hosting.ShopCategory.Table, r.GetString(10), a.Owned);
+                a.DeckTheme = Fodinha.Hosting.ShopCatalog.ValidEquipped(Fodinha.Hosting.ShopCategory.Deck, r.GetString(11), a.Owned);
+                list.Add(a);
             }
             return list;
         }
@@ -120,10 +132,11 @@ create table if not exists accounts (
         public async Task SaveAsync(Account a, CancellationToken ct = default)
         {
             const string sql = @"
-insert into accounts (id, token_hash, name, coins, games, wins, created_at, updated_at)
-values (@id, @token, @name, @coins, @games, @wins, @created, @updated)
+insert into accounts (id, token_hash, name, coins, games, wins, created_at, updated_at, avatar, owned, table_theme, deck_theme, no_ads)
+values (@id, @token, @name, @coins, @games, @wins, @created, @updated, @avatar, @owned, @table, @deck, @noads)
 on conflict (id) do update set name = excluded.name, coins = excluded.coins, games = excluded.games,
-  wins = excluded.wins, updated_at = excluded.updated_at;";
+  wins = excluded.wins, updated_at = excluded.updated_at, avatar = excluded.avatar, owned = excluded.owned,
+  table_theme = excluded.table_theme, deck_theme = excluded.deck_theme, no_ads = excluded.no_ads;";
             await using var conn = new NpgsqlConnection(connectionString);
             await conn.OpenAsync(ct);
             await using var cmd = new NpgsqlCommand(sql, conn);
@@ -135,7 +148,22 @@ on conflict (id) do update set name = excluded.name, coins = excluded.coins, gam
             cmd.Parameters.AddWithValue("wins", a.Wins);
             cmd.Parameters.AddWithValue("created", DateTime.SpecifyKind(a.CreatedAt, DateTimeKind.Utc));
             cmd.Parameters.AddWithValue("updated", DateTime.SpecifyKind(a.UpdatedAt, DateTimeKind.Utc));
+            cmd.Parameters.AddWithValue("avatar", a.Avatar ?? "");
+            cmd.Parameters.AddWithValue("owned", string.Join(",", a.Owned ?? new List<string>()));
+            cmd.Parameters.AddWithValue("table", a.TableTheme ?? "");
+            cmd.Parameters.AddWithValue("deck", a.DeckTheme ?? "");
+            cmd.Parameters.AddWithValue("noads", a.NoAds);
             await cmd.ExecuteNonQueryAsync(ct);
+        }
+
+        /// <summary>"mesa_azul,baralho_preto" → lista (ignora itens que não existem mais).</summary>
+        public static List<string> SplitOwned(string text)
+        {
+            var list = new List<string>();
+            if (string.IsNullOrEmpty(text)) return list;
+            foreach (var id in text.Split(','))
+                if (Fodinha.Hosting.ShopCatalog.Find(id) != null && !list.Contains(id)) list.Add(id);
+            return list;
         }
     }
 

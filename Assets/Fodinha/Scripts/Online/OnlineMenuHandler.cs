@@ -32,7 +32,10 @@ namespace Fodinha.Online
                 client.ConnectFailed += _ => { if (current != null) current.SetCoins(null, false); };
                 client.ErrorReceived += e =>
                 {
-                    if (current != null && e.code == ErrorCodes.RewardUnavailable) current.ShowToast(OnlineClient.Describe(e));
+                    if (current == null) return;
+                    if (e.code == ErrorCodes.RewardUnavailable || e.code == ErrorCodes.Shop || e.code == ErrorCodes.Code ||
+                        (e.code == ErrorCodes.NotEnoughCoins && current.CurrentPage == MenuScreen.Page.Shop))
+                        current.ShowToast(OnlineClient.Describe(e), 3f);
                 };
             }
             if (client.Profile != null) screen.SetCoins(client.Profile.coins, client.Profile.canClaimReward);
@@ -42,9 +45,38 @@ namespace Fodinha.Online
 
         private void OnProfile(ProfileMsg p)
         {
+            // Itens, mesa, baralho e "sem anúncios" valem também no modo offline: ficam guardados no aparelho.
+            GamePrefs.ApplyServerProfile(p.owned, p.table, p.deck, p.noAds);
             if (current == null) return;
             current.SetCoins(p.coins, p.canClaimReward);
+            current.RefreshCosmetics();
             if (p.delta > 0 && p.reason == "recompensa") current.ShowToast("+" + p.delta + " moedas!");
+            else if (p.reason == "compra") current.ShowToast("Compra feita! Já está em uso.");
+            else if (p.reason == "vip") current.ShowToast("Código aceito! Sua conta está sem anúncios.", 3.5f);
+        }
+
+        public void SaveAvatar(MenuScreen screen, string avatar)
+        {
+            current = screen;
+            OnlineClient.Instance.Send(Protocol.ToServer.SetAvatar, new AvatarMsg { avatar = avatar });
+        }
+
+        public void BuyItem(MenuScreen screen, string itemId)
+        {
+            current = screen;
+            OnlineClient.Instance.Send(Protocol.ToServer.BuyItem, new ItemMsg { item = itemId });
+        }
+
+        public void EquipItem(MenuScreen screen, string itemId)
+        {
+            current = screen;
+            OnlineClient.Instance.Send(Protocol.ToServer.EquipItem, new ItemMsg { item = itemId });
+        }
+
+        public void RedeemCode(MenuScreen screen, string code)
+        {
+            current = screen;
+            OnlineClient.Instance.Send(Protocol.ToServer.RedeemCode, new CodeMsg { code = code });
         }
 
         private void OnRanking(RankingMsg r)
@@ -69,6 +101,12 @@ namespace Fodinha.Online
         public void ClaimReward(MenuScreen screen)
         {
             current = screen;
+            // Conta sem anúncios (código VIP): ganha direto, sem vídeo. O servidor continua conferindo o saldo.
+            if (GamePrefs.NoAds)
+            {
+                OnlineClient.Instance.Send(Protocol.ToServer.ClaimReward);
+                return;
+            }
             Game.Ads.AdService.ShowRewarded(earned =>
             {
                 if (earned) OnlineClient.Instance.Send(Protocol.ToServer.ClaimReward);

@@ -18,12 +18,37 @@ namespace Fodinha.Server
         public int Wins;
         public DateTime CreatedAt;
         public DateTime UpdatedAt;
+        /// <summary>Avatar (texto do <see cref="Fodinha.Hosting.AvatarSpec"/>). Vazio = sorteado pelo id.</summary>
+        public string Avatar = "";
+        /// <summary>Itens comprados na loja.</summary>
+        public List<string> Owned = new List<string>();
+        /// <summary>Mesa e baralho em uso.</summary>
+        public string TableTheme = Fodinha.Hosting.ShopCatalog.DefaultTable;
+        public string DeckTheme = Fodinha.Hosting.ShopCatalog.DefaultDeck;
+        /// <summary>Conta sem anúncios (código VIP do dono do jogo; no futuro, compra "remover anúncios").</summary>
+        public bool NoAds;
+
+        /// <summary>Tentativas erradas de código VIP (só em memória; bloqueia chute em massa).</summary>
+        [NonSerialized] public int CodeFailures;
+        [NonSerialized] public double CodeLockedUntil = double.NegativeInfinity;
 
         /// <summary>Última vez que ganhou moedas por vídeo (só em memória; limita a frequência).</summary>
         [NonSerialized] public double LastRewardAt = double.NegativeInfinity;
 
-        public Account Snapshot() => (Account)MemberwiseClone();
+        public Account Snapshot()
+        {
+            var copy = (Account)MemberwiseClone();
+            copy.Owned = new List<string>(Owned ?? new List<string>());
+            return copy;
+        }
+
+        /// <summary>Avatar para mostrar (o salvo ou um sorteado a partir do id, sempre o mesmo).</summary>
+        public string EffectiveAvatar =>
+            string.IsNullOrEmpty(Avatar) ? Fodinha.Hosting.AvatarSpec.FromSeed(Id).Encode() : Avatar;
     }
+
+    /// <summary>Resultado de uma compra na loja.</summary>
+    public enum PurchaseResult { Ok, UnknownItem, AlreadyOwned, NotEnoughCoins }
 
     /// <summary>
     /// Todas as contas, em memória (carregadas do banco ao iniciar). Cada alteração é enviada para
@@ -103,6 +128,56 @@ namespace Fodinha.Server
             a.Games++;
             if (won) a.Wins++;
             Changed(a);
+        }
+
+        /// <summary>Troca o avatar (texto já validado; inválido vira vazio = sorteado).</summary>
+        public void SetAvatar(Account a, string avatar)
+        {
+            avatar = Fodinha.Hosting.AvatarSpec.Sanitize(avatar);
+            if (a == null || a.Avatar == avatar || avatar.Length == 0) return;
+            a.Avatar = avatar;
+            Changed(a);
+        }
+
+        public void SetNoAds(Account a, bool noAds)
+        {
+            if (a == null || a.NoAds == noAds) return;
+            a.NoAds = noAds;
+            Changed(a);
+        }
+
+        /// <summary>Compra um item da loja: confere se existe, se já é dele e o saldo; desconta e passa a usar.</summary>
+        public PurchaseResult Buy(Account a, string itemId)
+        {
+            var item = Fodinha.Hosting.ShopCatalog.Find(itemId);
+            if (a == null || item == null) return PurchaseResult.UnknownItem;
+            if (Fodinha.Hosting.ShopCatalog.Owns(a.Owned, item.Id)) return PurchaseResult.AlreadyOwned;
+            if (a.Coins < item.Price) return PurchaseResult.NotEnoughCoins;
+            a.Coins -= item.Price;
+            a.Owned.Add(item.Id);
+            if (item.Category == Fodinha.Hosting.ShopCategory.Table) a.TableTheme = item.Id;
+            else a.DeckTheme = item.Id;
+            Changed(a);
+            return PurchaseResult.Ok;
+        }
+
+        /// <summary>Passa a usar um item que já é do jogador. Falso se não existir ou não for dele.</summary>
+        public bool Equip(Account a, string itemId)
+        {
+            var item = Fodinha.Hosting.ShopCatalog.Find(itemId);
+            if (a == null || item == null || !Fodinha.Hosting.ShopCatalog.Owns(a.Owned, item.Id)) return false;
+            if (item.Category == Fodinha.Hosting.ShopCategory.Table)
+            {
+                if (a.TableTheme == item.Id) return true;
+                a.TableTheme = item.Id;
+            }
+            else
+            {
+                if (a.DeckTheme == item.Id) return true;
+                a.DeckTheme = item.Id;
+            }
+            Changed(a);
+            return true;
         }
 
         /// <summary>Ranking: mais moedas primeiro; empate, mais vitórias; depois quem chegou antes.</summary>

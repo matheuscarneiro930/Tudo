@@ -37,6 +37,11 @@ namespace Fodinha.Server
         /// <summary>Intervalo mínimo entre duas recompensas da mesma conta.</summary>
         public float RewardCooldownSeconds = 20f;
         public int RankingSize = 50;
+        /// <summary>Código VIP do dono (variável VIP_CODE no Render): quem digitar fica sem anúncios. Vazio = desligado.</summary>
+        public string VipCode = "";
+        /// <summary>Tentativas erradas de código antes de bloquear por <see cref="CodeLockSeconds"/>.</summary>
+        public int MaxCodeFailures = 5;
+        public float CodeLockSeconds = 600f;
         public PacingSettings Pacing = new PacingSettings();
     }
 
@@ -138,6 +143,10 @@ namespace Fodinha.Server
                 case Protocol.ToServer.GetProfile: SendProfile(player, 0, null); break;
                 case Protocol.ToServer.GetRanking: HandleRanking(player); break;
                 case Protocol.ToServer.ClaimReward: HandleClaimReward(player); break;
+                case Protocol.ToServer.SetAvatar: HandleSetAvatar(player, Protocol.Payload<AvatarMsg>(env)); break;
+                case Protocol.ToServer.BuyItem: HandleBuy(player, Protocol.Payload<ItemMsg>(env)); break;
+                case Protocol.ToServer.EquipItem: HandleEquip(player, Protocol.Payload<ItemMsg>(env)); break;
+                case Protocol.ToServer.RedeemCode: HandleRedeemCode(player, Protocol.Payload<CodeMsg>(env)); break;
                 default: SendError(link, ErrorCodes.BadMessage, "Tipo de mensagem desconhecido."); break;
             }
         }
@@ -225,6 +234,7 @@ namespace Fodinha.Server
                 byToken[player.Token] = player;
             }
             accounts.Rename(player.Account, player.Name);
+            accounts.SetAvatar(player.Account, msg.avatar);
 
             if (byLink.TryGetValue(link, out var previous) && previous != player) previous.Link = null;
             player.Link = link;
@@ -424,6 +434,8 @@ namespace Fodinha.Server
                 }
                 m.Stake = stake;
             }
+            // Avatar de cada assento, fixo durante a partida.
+            room.SeatAvatars = room.Members.Select(m => m.Avatar).ToList();
 
             var names = room.Members.Select(m => m.Name).ToList();
             var engine = new MatchEngine(room.Options.Rules, names, new SystemRandomSource(rng.Next(int.MaxValue)));
@@ -652,7 +664,8 @@ namespace Fodinha.Server
                     turnRemaining = room.Director.TurnTimeRemaining,
                     turnTotal = room.Director.TurnTimeTotal,
                     phaseWait = room.Director.PhaseWaitRemaining,
-                    events = events
+                    events = events,
+                    avatars = room.SeatAvatars
                 };
                 m.Player.Send(Protocol.Encode(Protocol.ToClient.Match, update));
             }
@@ -671,7 +684,12 @@ namespace Fodinha.Server
                 wins = a.Wins,
                 delta = delta,
                 reason = reason,
-                canClaimReward = a.Coins < options.RewardCap
+                canClaimReward = a.Coins < options.RewardCap,
+                avatar = a.EffectiveAvatar,
+                owned = new List<string>(a.Owned),
+                table = a.TableTheme,
+                deck = a.DeckTheme,
+                noAds = a.NoAds
             }));
         }
 
@@ -706,6 +724,87 @@ namespace Fodinha.Server
             int gained = accounts.AddCoins(a, Math.Min(options.RewardAmount, options.RewardCap - a.Coins));
             SendProfile(player, gained, "recompensa");
         }
+
+        // ------------------------------------------------------------------ avatar, loja e código VIP
+
+        private void HandleSetAvatar(Player player, AvatarMsg msg)
+        {
+            if (msg == null || AvatarSpec.Sanitize(msg.avatar).Length == 0)
+            {
+                player.SendError(ErrorCodes.BadMessage, "Avatar inválido.");
+                return;
+            }
+            accounts.SetAvatar(player.Account, msg.avatar);
+            SendProfile(player, 0, null);
+            // Na sala (antes da partida) os outros veem o avatar novo na hora.
+            if (player.Room != null && !player.Room.InMatch) BroadcastRoom(player.Room);
+        }
+
+        private void HandleBuy(Player player, ItemMsg msg)
+        {
+            var item = ShopCatalog.Find(msg?.item);
+            switch (accounts.Buy(player.Account, msg?.item))
+            {
+                case PurchaseResult.Ok:
+                    SendProfile(player, -item.Price, "compra");
+                    break;
+                case PurchaseResult.AlreadyOwned:
+                    player.SendError(ErrorCodes.Shop, "Você já tem esse item.");
+                    break;
+                case PurchaseResult.NotEnoughCoins:
+                    player.SendError(ErrorCodes.NotEnoughCoins, "Faltam " + (item.Price - player.Account.Coins) + " moedas para comprar " + item.Name + ".");
+                    break;
+                default:
+                    player.SendError(ErrorCodes.Shop, "Item não encontrado.");
+                    break;
+            }
+        }
+
+        private void HandleEquip(Player player, ItemMsg msg)
+        {
+            if (!accounts.Equip(player.Account, msg?.item))
+            {
+                player.SendError(ErrorCodes.Shop, "Você ainda não tem esse item.");
+                return;
+            }
+            SendProfile(player, 0, null);
+        }
+
+        /// <summary>Código VIP: compara sem vazar tempo e bloqueia depois de várias tentativas erradas.</summary>
+        private void HandleRedeemCode(Player player, CodeMsg msg)
+        {
+            var a = player.Account;
+            if (now < a.CodeLockedUntil)
+            {
+                player.SendError(ErrorCodes.Code, "Muitas tentativas. Tente de novo mais tarde.");
+                return;
+            }
+            if (!VipCodeMatches(msg?.code))
+            {
+                if (++a.CodeFailures >= options.MaxCodeFailures)
+                {
+                    a.CodeFailures = 0;
+                    a.CodeLockedUntil = now + options.CodeLockSeconds;
+                }
+                player.SendError(ErrorCodes.Code, "Código inválido.");
+                return;
+            }
+            a.CodeFailures = 0;
+            accounts.SetNoAds(a, true);
+            SendProfile(player, 0, "vip");
+        }
+
+        private bool VipCodeMatches(string code)
+        {
+            string expected = NormalizeCode(options.VipCode);
+            if (expected.Length < 6) return false; // sem código configurado (ou fraco demais): desligado
+            var given = System.Text.Encoding.UTF8.GetBytes(NormalizeCode(code));
+            var want = System.Text.Encoding.UTF8.GetBytes(expected);
+            return given.Length == want.Length && System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(given, want);
+        }
+
+        private static string NormalizeCode(string code) =>
+            string.IsNullOrWhiteSpace(code) || code.Length > 64 ? "" : code.Trim().ToUpperInvariant();
 
         private static void SendError(IClientLink link, string code, string message)
         {
@@ -760,6 +859,9 @@ namespace Fodinha.Server
             public int Stake;         // quanto pagou para entrar na partida atual
 
             public string Name => IsBot ? BotName : Player.Name;
+
+            /// <summary>Bot: avatar sorteado pelo nome (sempre o mesmo). Humano: o da conta.</summary>
+            public string Avatar => IsBot ? AvatarSpec.FromSeed(BotName).Encode() : Player.Account?.EffectiveAvatar ?? "";
         }
 
         internal sealed class Room
@@ -775,6 +877,7 @@ namespace Fodinha.Server
             public readonly List<MatchEvent> PendingEvents = new List<MatchEvent>();
             public double AbandonedSince = -1;
             public int Pot;           // soma das entradas da partida atual
+            public List<string> SeatAvatars = new List<string>();
 
             public Room(string code, RoomOptions options)
             {
@@ -815,7 +918,8 @@ namespace Fodinha.Server
                         name = m.Name,
                         bot = m.IsBot,
                         connected = m.IsBot || m.Player.Link != null,
-                        owner = m.Id == OwnerId
+                        owner = m.Id == OwnerId,
+                        avatar = m.Avatar
                     });
                 }
                 return dto;

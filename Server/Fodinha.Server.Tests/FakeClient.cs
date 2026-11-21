@@ -61,10 +61,10 @@ namespace Fodinha.Server.Tests
 
         public void Do(string type, object payload = null) => core.OnMessage(this, Protocol.Encode(type, payload));
 
-        public FakeClient Hello(string token = null)
+        public FakeClient Hello(string token = null, string avatar = null)
         {
             core.OnConnected(this);
-            Do(Protocol.ToServer.Hello, new HelloMsg { name = Name, token = token, version = Protocol.Version });
+            Do(Protocol.ToServer.Hello, new HelloMsg { name = Name, token = token, version = Protocol.Version, avatar = avatar });
             return this;
         }
 

@@ -53,5 +53,16 @@ Você está recebendo o projeto **Fodinha Online** (Unity 6000.4.7f1 + C#, celul
   tela cheia no fim da partida), Game/Ads/AdService (interface + provisório no site/PC). IDs de TESTE em AdIds e
   AdMobConfigurator. IDs REAIS do dono já configurados (app ~9837967079, premiado /5275693506, intersticial /9647676640).
   Sem vídeo disponível, o premiado cai na tela provisória (o servidor limita a recompensa).
-- Próximas: 2C avatar estilo Memoji + loja com moedas,
-  2D loja de acessórios com dinheiro real (Google Play Billing).
+- Parte 2C ✅ avatar e loja com moedas:
+  - `Hosting/AvatarSpec` (avatar em texto "1-…", 9 partes; bots = `FromSeed(nome)`), `Hosting/ShopCatalog` (mesas e
+    baralhos, preços; grátis = de todos). Desenho no app: `Game/UI/AvatarPainter` (procedural, cache), `AvatarView`,
+    `CosmeticLooks` (cores das mesas/baralhos), `SpriteFactory.TableFor/CardBackFor`.
+  - Menu: avatar ao lado do nome (página Avatar), botões Loja/Configurações, "+100 moedas" sempre visível
+    (apagado com 500+). Avatar aparece no lobby, nos assentos e no jogador local.
+  - Servidor: set_avatar, buy_item, equip_item (conta: avatar, owned, table_theme, deck_theme no Postgres);
+    `MatchUpdateDto.avatars` por assento; `MemberDto.avatar`.
+  - Código VIP (conta sem anúncios): variável VIP_CODE no Render (mín. 6 caracteres; nunca no código).
+    Configurações → Código VIP → redeem_code; 5 erros = bloqueio de 10 min. `GamePrefs.NoAds` pula os anúncios.
+  - Revisar avatares: `-Method Fodinha.EditorTools.AvatarSheet.ExportFromCommandLine -Extra "-sheetPath <png>"`.
+- Próxima: 2D loja de acessórios com dinheiro real (Google Play Billing) — pode incluir "remover anúncios"
+  (já existe o campo NoAds na conta).

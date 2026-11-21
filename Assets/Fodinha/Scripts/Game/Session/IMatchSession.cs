@@ -38,6 +38,9 @@ namespace Fodinha.Game
         /// <summary>Segundos até a partida seguir depois de uma vaza/rodada concluída.</summary>
         float PhaseWaitRemaining { get; }
 
+        /// <summary>Avatar do assento (texto do AvatarSpec). Vazio = a tela sorteia um pelo nome.</summary>
+        string AvatarOf(int seat);
+
         /// <summary>Nova visão disponível (estado mudou).</summary>
         event Action<MatchView> ViewChanged;
 

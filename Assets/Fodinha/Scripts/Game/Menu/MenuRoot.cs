@@ -42,6 +42,10 @@ namespace Fodinha.Game.Menu
             screen.RefreshRoomsRequested += () => WithOnline(h => h.RefreshPublicRooms(screen), quiet: true);
             screen.RankingRequested += () => WithOnline(h => h.ShowRanking(screen));
             screen.ClaimRewardRequested += () => WithOnline(h => h.ClaimReward(screen));
+            screen.AvatarSaved += avatar => WithOnline(h => h.SaveAvatar(screen, avatar), quiet: true);
+            screen.BuyRequested += item => WithOnline(h => h.BuyItem(screen, item));
+            screen.EquipRequested += item => WithOnline(h => h.EquipItem(screen, item), quiet: true);
+            screen.VipCodeSubmitted += code => WithOnline(h => h.RedeemCode(screen, code));
             OnlineHandler?.OnMenuOpened(screen);
         }
 
@@ -81,5 +85,13 @@ namespace Fodinha.Game.Menu
         void ShowRanking(MenuScreen screen);
         /// <summary>Assistir um vídeo e ganhar moedas (só com menos de 500).</summary>
         void ClaimReward(MenuScreen screen);
+        /// <summary>Avatar mudou: avisa o servidor (os outros jogadores passam a ver o novo).</summary>
+        void SaveAvatar(MenuScreen screen, string avatar);
+        /// <summary>Comprar um item da loja com moedas (o servidor confere o saldo).</summary>
+        void BuyItem(MenuScreen screen, string itemId);
+        /// <summary>Usar um item já comprado.</summary>
+        void EquipItem(MenuScreen screen, string itemId);
+        /// <summary>Código VIP: conta sem anúncios.</summary>
+        void RedeemCode(MenuScreen screen, string code);
     }
 }

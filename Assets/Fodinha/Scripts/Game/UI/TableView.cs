@@ -33,6 +33,9 @@ namespace Fodinha.Game.UI
 
         public IReadOnlyList<SeatView> Seats => seats;
 
+        /// <summary>Avatar de cada assento (dado pela sessão). Null = avatar sorteado pelo nome.</summary>
+        public System.Func<int, string> AvatarProvider;
+
         public static TableView Create(Transform parent)
         {
             var rt = UiKit.Rect("Mesa", parent);
@@ -102,6 +105,7 @@ namespace Fodinha.Game.UI
                 var p = view.Players[seat];
                 bool isTurn = view.CurrentSeat == seat && (view.Phase == MatchPhase.Betting || view.Phase == MatchPhase.Playing);
                 sv.Render(p, view, isTurn);
+                sv.SetAvatar(AvatarProvider?.Invoke(p.Seat), p.Name);
                 sv.SetTimer(false, 0f);
             }
             for (int i = index; i < seats.Count; i++) seats[i].gameObject.SetActive(false);

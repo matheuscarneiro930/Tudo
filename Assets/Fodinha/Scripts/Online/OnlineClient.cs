@@ -205,7 +205,8 @@ namespace Fodinha.Online
                     {
                         name = GamePrefs.PlayerName,
                         token = GamePrefs.OnlineToken,
-                        version = Protocol.Version
+                        version = Protocol.Version,
+                        avatar = GamePrefs.Avatar
                     }));
                 }
                 else if (t.Status == SocketStatus.Closed)

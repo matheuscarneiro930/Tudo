@@ -13,8 +13,8 @@ namespace Fodinha.Game.UI
         private static Sprite roundedRect;
         private static Sprite roundedOutline;
         private static Sprite circle;
-        private static Sprite table;
-        private static Sprite cardBack;
+        private static readonly System.Collections.Generic.Dictionary<string, Sprite> tables = new System.Collections.Generic.Dictionary<string, Sprite>();
+        private static readonly System.Collections.Generic.Dictionary<string, Sprite> cardBacks = new System.Collections.Generic.Dictionary<string, Sprite>();
         private static Sprite background;
         private static Sprite softGlow;
 
@@ -26,9 +26,25 @@ namespace Fodinha.Game.UI
 
         public static Sprite Circle => circle != null ? circle : (circle = BuildCircle(128));
 
-        public static Sprite Table => table != null ? table : (table = BuildTable(512));
+        /// <summary>Mesa escolhida pelo jogador (loja).</summary>
+        public static Sprite Table => TableFor(GamePrefs.TableTheme);
 
-        public static Sprite CardBack => cardBack != null ? cardBack : (cardBack = BuildCardBack(138, 200));
+        /// <summary>Verso das cartas do baralho escolhido pelo jogador (loja).</summary>
+        public static Sprite CardBack => CardBackFor(GamePrefs.DeckTheme);
+
+        public static Sprite TableFor(string id)
+        {
+            id ??= "";
+            if (tables.TryGetValue(id, out var s) && s != null) return s;
+            return tables[id] = BuildTable(512, CosmeticLooks.Table(id));
+        }
+
+        public static Sprite CardBackFor(string id)
+        {
+            id ??= "";
+            if (cardBacks.TryGetValue(id, out var s) && s != null) return s;
+            return cardBacks[id] = BuildCardBack(138, 200, CosmeticLooks.Deck(id));
+        }
 
         public static Sprite Background => background != null ? background : (background = BuildVerticalGradient(Palette.BackgroundTop, Palette.BackgroundBottom));
 
@@ -188,14 +204,15 @@ namespace Fodinha.Game.UI
             return Finish(tex, Vector4.zero);
         }
 
-        /// <summary>Mesa oval: feltro verde com degradê radial e borda de madeira.</summary>
-        private static Sprite BuildTable(int size)
+        /// <summary>Mesa oval: feltro com degradê radial e borda (madeira ou dourada), nas cores do item da loja.</summary>
+        private static Sprite BuildTable(int size, CosmeticLooks.TableLook look)
         {
             var tex = NewTexture(size, size);
             var pixels = new Color32[size * size];
             float r = size * 0.5f;
             float rimWidth = size * 0.045f;
-            Color rimDark = Palette.Rim * 0.7f; rimDark.a = 1f;
+            Color rimDark = look.Rim * 0.7f; rimDark.a = 1f;
+            Color rimLight = Color.Lerp(look.Rim, Color.white, 0.35f);
             for (int y = 0; y < size; y++)
             for (int x = 0; x < size; x++)
             {
@@ -206,12 +223,14 @@ namespace Fodinha.Game.UI
                 if (dist > r - rimWidth)
                 {
                     float t = (dist - (r - rimWidth)) / rimWidth;
-                    c = Color.Lerp(Palette.Rim, rimDark, t);
+                    c = Color.Lerp(look.Rim, rimDark, t);
+                    // borda metálica: faixa de brilho
+                    if (look.ShinyRim) c = Color.Lerp(c, rimLight, Mathf.Clamp01(1f - Mathf.Abs(t - 0.35f) / 0.2f) * 0.7f);
                 }
                 else
                 {
                     float t = dist / (r - rimWidth);
-                    c = Color.Lerp(Palette.FeltCenter, Palette.FeltEdge, t * t);
+                    c = Color.Lerp(look.Center, look.Edge, t * t);
                     // sombra interna perto da borda
                     float shade = Mathf.Clamp01((t - 0.93f) / 0.07f);
                     c = Color.Lerp(c, c * 0.65f, shade);
@@ -223,8 +242,8 @@ namespace Fodinha.Game.UI
             return Finish(tex, Vector4.zero);
         }
 
-        /// <summary>Verso da carta: fundo vinho com losangos, moldura clara e cantos arredondados.</summary>
-        private static Sprite BuildCardBack(int w, int h)
+        /// <summary>Verso da carta: fundo colorido com padrão (losangos, listras, bolinhas ou xadrez), moldura e cantos arredondados.</summary>
+        private static Sprite BuildCardBack(int w, int h, CosmeticLooks.DeckLook look)
         {
             var tex = NewTexture(w, h);
             var pixels = new Color32[w * h];
@@ -237,16 +256,9 @@ namespace Fodinha.Game.UI
                 float d = RoundedRectDistance(px, py, w, h, radius);
                 float alpha = Mathf.Clamp01(0.5f - d);
                 Color c;
-                if (d > -frame * 0.55f) c = Palette.CardFace;            // moldura branca
-                else if (d > -frame) c = Palette.CardBack * 0.8f;          // filete escuro
-                else
-                {
-                    // padrão de losangos
-                    float u = (px + py) / 14f, v = (px - py) / 14f;
-                    float fu = Mathf.Abs(u - Mathf.Round(u)), fv = Mathf.Abs(v - Mathf.Round(v));
-                    bool line = fu < 0.12f || fv < 0.12f;
-                    c = line ? Palette.CardBackPattern : Palette.CardBack;
-                }
+                if (d > -frame * 0.55f) c = look.Frame;                    // moldura
+                else if (d > -frame) c = look.Back * 0.8f;                 // filete escuro
+                else c = CosmeticLooks.InsidePattern(look.Pattern, px, py) ? look.PatternColor : look.Back;
                 c.a = alpha;
                 pixels[y * w + x] = c;
             }

@@ -37,6 +37,10 @@ namespace Fodinha.Online
 
         private float Elapsed => clock() - receivedAt;
 
+        /// <summary>Avatares enviados pelo servidor (um por assento).</summary>
+        public string AvatarOf(int seat) =>
+            last?.avatars != null && seat >= 0 && seat < last.avatars.Count ? last.avatars[seat] : "";
+
         /// <summary>Aplica uma atualização recebida do servidor.</summary>
         public void Apply(MatchUpdateDto update)
         {

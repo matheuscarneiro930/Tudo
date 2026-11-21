@@ -29,6 +29,7 @@ namespace Fodinha.Game.UI
         private Image localPanel;
         private Image localOutline;
         private Text localName;
+        private AvatarView localAvatar;
         private Image localHeart;
         private Text localLives;
         private Text localBet;
@@ -82,6 +83,7 @@ namespace Fodinha.Game.UI
             session.ViewChanged += Render;
             session.ActionRejected += OnActionRejected;
             session.EventReceived += OnMatchEvent;
+            table.AvatarProvider = session.AvatarOf;
             if (session.View != null) Render(session.View);
         }
 
@@ -91,6 +93,7 @@ namespace Fodinha.Game.UI
             session.ViewChanged -= Render;
             session.ActionRejected -= OnActionRejected;
             session.EventReceived -= OnMatchEvent;
+            table.AvatarProvider = null;
             session = null;
         }
 
@@ -248,13 +251,16 @@ namespace Fodinha.Game.UI
             localOutline.rectTransform.Fill();
             localOutline.raycastTarget = false;
 
+            localAvatar = AvatarView.Create(strip, "Avatar");
+            localAvatar.Image.rectTransform.Place(new Vector2(0.06f, 0.56f), new Vector2(100f, 100f));
+
             localDealer = UiKit.Image("Distribuidor", strip, Palette.Accent, SpriteFactory.Circle);
-            localDealer.rectTransform.Place(new Vector2(0.035f, 0.55f), new Vector2(54f, 54f));
+            localDealer.rectTransform.Place(new Vector2(0.105f, 0.3f), new Vector2(44f, 44f));
             var d = UiKit.Label("D", localDealer.transform, "D", 34, Palette.AccentDark, TextAnchor.MiddleCenter, FontStyle.Bold);
             d.rectTransform.Fill();
 
             localName = UiKit.Label("Nome", strip, "", 38, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
-            localName.rectTransform.Anchor(0.08f, 0.2f, 0.38f, 0.95f);
+            localName.rectTransform.Anchor(0.13f, 0.2f, 0.38f, 0.95f);
             localHeart = UiKit.Image("Coracao", strip, Palette.Heart, SpriteFactory.Suit(Suit.Hearts));
             localHeart.preserveAspect = true;
             localHeart.raycastTarget = false;
@@ -328,6 +334,7 @@ namespace Fodinha.Game.UI
             if (me == null)
             {
                 localName.text = "Espectador";
+                localAvatar.gameObject.SetActive(false);
                 localLives.text = "";
                 localBet.text = "";
                 localDealer.gameObject.SetActive(false);
@@ -335,6 +342,8 @@ namespace Fodinha.Game.UI
                 return;
             }
 
+            localAvatar.gameObject.SetActive(true);
+            localAvatar.Show(session != null ? session.AvatarOf(me.Seat) : "", me.Name);
             localName.text = me.Name + (me.IsAutoPlay ? " " + UiKit.Colored("(auto)", Palette.TextMuted) : "");
             localHeart.gameObject.SetActive(!me.IsEliminated);
             localLives.text = me.IsEliminated ? UiKit.Colored("Eliminado", Palette.Bad) : me.Lives.ToString();

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Fodinha.Core;
 using Fodinha.Game.UI;
@@ -12,9 +12,9 @@ namespace Fodinha.Game.Menu
     /// Menu principal em retrato, montado por código. Só coleta escolhas e dispara pedidos
     /// (jogar offline, criar sala, entrar com código, atualizar salas públicas). Quem executa é o <see cref="MenuRoot"/>.
     /// </summary>
-    public sealed class MenuScreen : MonoBehaviour
+    public sealed partial class MenuScreen : MonoBehaviour
     {
-        public enum Page { Home, Offline, CreateRoom, JoinRoom, PublicRooms, Settings, HowToPlay, Ranking }
+        public enum Page { Home, Offline, CreateRoom, JoinRoom, PublicRooms, Settings, HowToPlay, Ranking, Avatar, Shop }
 
         private readonly Dictionary<Page, GameObject> pages = new Dictionary<Page, GameObject>();
         private bool built;
@@ -76,6 +76,13 @@ namespace Fodinha.Game.Menu
             {
                 case Page.Home:
                     homeName.text = GamePrefs.HasCustomName ? GamePrefs.PlayerName : "";
+                    homeAvatar.Show(GamePrefs.Avatar);
+                    break;
+                case Page.Avatar:
+                    LoadAvatarEditor();
+                    break;
+                case Page.Shop:
+                    RefreshShop();
                     break;
                 case Page.Offline:
                     offlineRules.Load(GamePrefs.OfflineRules, GamePrefs.OfflineBots);
@@ -99,6 +106,8 @@ namespace Fodinha.Game.Menu
                     serverField.text = GamePrefs.HasCustomServer ? GamePrefs.ServerUrl : "";
                     soundStepper.SetIndex(GamePrefs.SoundOn ? 1 : 0);
                     vibrationStepper.SetIndex(GamePrefs.VibrationOn ? 1 : 0);
+                    vipField.text = "";
+                    RefreshVipStatus();
                     break;
             }
         }
@@ -129,6 +138,8 @@ namespace Fodinha.Game.Menu
             BuildSettings();
             BuildHowToPlay();
             BuildRanking();
+            BuildAvatarPage();
+            BuildShop();
 
             toastBg = UiKit.Image("Aviso", safeRoot, new Color(0.08f, 0.08f, 0.08f, 0.94f), SpriteFactory.RoundedRect, 1.2f);
             toastBg.rectTransform.Anchor(0.06f, 0.13f, 0.94f, 0.2f);
@@ -207,25 +218,39 @@ namespace Fodinha.Game.Menu
                 GamePrefs.PlayerName = value;
                 homeName.text = GamePrefs.HasCustomName ? GamePrefs.PlayerName : "";
             });
-            homeName.GetComponent<RectTransform>().Anchor(0.2f, 0.503f, 0.8f, 0.557f);
+            homeName.GetComponent<RectTransform>().Anchor(0.27f, 0.503f, 0.9f, 0.557f);
+
+            // Avatar ao lado do nome: toque para editar.
+            var avatarButton = UiKit.Button("BotaoAvatar", page, "", () => ShowPage(Page.Avatar), new Color(0f, 0f, 0f, 0f), Palette.Text, 20);
+            avatarButton.GetComponent<RectTransform>().Anchor(0.1f, 0.495f, 0.25f, 0.565f);
+            homeAvatar = AvatarView.Create(avatarButton.transform, "Avatar");
+            homeAvatar.Image.rectTransform.Fill();
+            var edit = UiKit.Image("Editar", avatarButton.transform, Palette.Accent, SpriteFactory.Circle);
+            edit.rectTransform.Place(new Vector2(0.86f, 0.14f), new Vector2(46f, 46f));
+            edit.raycastTarget = false;
+            var pencil = UiKit.Label("Lapis", edit.transform, "+", 40, Palette.AccentDark, TextAnchor.MiddleCenter, FontStyle.Bold);
+            pencil.rectTransform.Fill();
 
             AddHomeButton(page, "Jogar offline", 0, true, () => ShowPage(Page.Offline));
             AddHomeButton(page, "Criar sala", 1, false, () => ShowPage(Page.CreateRoom));
             AddHomeButton(page, "Entrar com código", 2, false, () => ShowPage(Page.JoinRoom));
             AddHomeButton(page, "Salas públicas", 3, false, () => ShowPage(Page.PublicRooms));
-            AddHomeButton(page, "Configurações", 4, false, () => ShowPage(Page.Settings));
+            AddHomeButton(page, "Loja", 4, false, () => ShowPage(Page.Shop), 0);
+            AddHomeButton(page, "Configurações", 4, false, () => ShowPage(Page.Settings), 1);
 
             var how = UiKit.Button("ComoJogar", page, "Como jogar?", () => ShowPage(Page.HowToPlay), new Color(0f, 0f, 0f, 0f), Palette.TextMuted, 34);
             how.GetComponent<RectTransform>().Anchor(0.3f, 0.01f, 0.7f, 0.055f);
         }
 
-        private static void AddHomeButton(RectTransform page, string label, int index, bool primary, Action onClick)
+        /// <summary>Botão da tela inicial. <paramref name="half"/>: -1 = largura toda, 0 = metade esquerda, 1 = metade direita.</summary>
+        private static void AddHomeButton(RectTransform page, string label, int index, bool primary, Action onClick, int half = -1)
         {
             const float top = 0.49f, height = 0.07f, gap = 0.018f;
             float yMax = top - index * (height + gap);
             var b = UiKit.Button("Botao_" + label, page, label, onClick,
                                  primary ? Palette.Button : Palette.ButtonSecondary, primary ? Palette.ButtonText : Palette.Text, 50);
-            b.GetComponent<RectTransform>().Anchor(0.1f, yMax - height, 0.9f, yMax);
+            float xMin = half == 1 ? 0.51f : 0.1f, xMax = half == 0 ? 0.49f : 0.9f;
+            b.GetComponent<RectTransform>().Anchor(xMin, yMax - height, xMax, yMax);
         }
 
         private void BuildOffline()
@@ -296,6 +321,8 @@ namespace Fodinha.Game.Menu
 
             var how = UiKit.Button("ComoJogar", content, "Como jogar", () => ShowPage(Page.HowToPlay), Palette.ButtonSecondary, Palette.Text, 40);
             UiControls.SetHeight(how, 104f);
+
+            BuildVipSection(content);
 
             var serverLabel = UiKit.Label("RotuloServidor", content, "Servidor (avançado)", 32, Palette.TextMuted, TextAnchor.LowerLeft, FontStyle.Bold);
             UiControls.SetHeight(serverLabel, 56f);
@@ -449,7 +476,7 @@ namespace Fodinha.Game.Menu
         private void BuildWalletRow(RectTransform page)
         {
             var badge = UiKit.Image("Carteira", page, Palette.Panel, SpriteFactory.RoundedRect, 1.5f);
-            badge.rectTransform.Anchor(0.04f, 0.948f, 0.46f, 0.992f);
+            badge.rectTransform.Anchor(0.04f, 0.948f, 0.4f, 0.992f);
             var coin = UiKit.Image("Moeda", badge.transform, Palette.Accent, SpriteFactory.Circle);
             coin.rectTransform.Anchor(0.04f, 0.15f, 0.16f, 0.85f);
             coin.preserveAspect = true;
@@ -458,12 +485,32 @@ namespace Fodinha.Game.Menu
             coinsText = UiKit.Label("Moedas", badge.transform, "—", 38, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
             coinsText.rectTransform.Anchor(0.2f, 0.08f, 0.97f, 0.92f);
 
-            claimButton = UiKit.Button("Ganhar", page, "+100", () => ClaimRewardRequested?.Invoke(), Palette.Good, Palette.ButtonText, 36);
-            claimButton.GetComponent<RectTransform>().Anchor(0.48f, 0.948f, 0.64f, 0.992f);
+            // "+100 moedas" fica sempre à vista; com 500 ou mais ele fica apagado e explica quando libera.
+            claimButton = UiKit.Button("Ganhar", page, "+100 moedas", OnClaimClicked, Palette.Good, Palette.ButtonText, 34);
+            claimButton.GetComponent<RectTransform>().Anchor(0.42f, 0.948f, 0.7f, 0.992f);
             claimButton.gameObject.SetActive(false);
 
             var rank = UiKit.Button("Ranking", page, "Ranking", () => ShowPage(Page.Ranking), Palette.ButtonSecondary, Palette.Text, 34);
-            rank.GetComponent<RectTransform>().Anchor(0.66f, 0.948f, 0.96f, 0.992f);
+            rank.GetComponent<RectTransform>().Anchor(0.72f, 0.948f, 0.96f, 0.992f);
+        }
+
+        /// <summary>Mínimo de moedas abaixo do qual o vídeo libera +100 (mesmo valor do servidor).</summary>
+        public const int RewardLimit = 500;
+
+        private bool canClaimNow;
+
+        /// <summary>Pode tocar no "+100 moedas" agora (tem menos de 500).</summary>
+        public bool ClaimAvailable => ClaimVisible && canClaimNow;
+
+        private void OnClaimClicked()
+        {
+            if (!ShownCoins.HasValue) { ShowToast("Sem conexão com o servidor. Tente de novo em instantes."); return; }
+            if (!canClaimNow)
+            {
+                ShowToast("O vídeo de +100 moedas libera quando você tiver menos de " + RewardLimit + " moedas.", 3.5f);
+                return;
+            }
+            ClaimRewardRequested?.Invoke();
         }
 
         /// <summary>Mostra o saldo (null = sem conexão) e o botão de ganhar moedas.</summary>
@@ -471,8 +518,12 @@ namespace Fodinha.Game.Menu
         {
             EnsureBuilt();
             ShownCoins = coins;
+            canClaimNow = canClaim;
             coinsText.text = coins.HasValue ? FormatCoins(coins.Value) : "—";
-            claimButton.gameObject.SetActive(coins.HasValue && canClaim);
+            claimButton.gameObject.SetActive(coins.HasValue);
+            claimButton.image.color = canClaim ? Palette.Good : Palette.Disabled;
+            UiKit.ButtonLabel(claimButton).color = canClaim ? Palette.ButtonText : Palette.TextMuted;
+            if (CurrentPage == Page.Shop) RefreshShop();
         }
 
         public static string FormatCoins(int coins) => coins.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
