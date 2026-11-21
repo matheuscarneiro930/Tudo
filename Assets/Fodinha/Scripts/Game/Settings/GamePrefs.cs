@@ -62,14 +62,26 @@ namespace Fodinha.Game
         /// </summary>
         public static string OnlineToken
         {
-            get => Application.isMobilePlatform ? PlayerPrefs.GetString(KeyOnlineToken, "") : sessionToken;
+            get => PersistToken ? PlayerPrefs.GetString(KeyOnlineToken, "") : sessionToken;
             set
             {
-                if (!Application.isMobilePlatform) { sessionToken = value ?? ""; return; }
+                if (!PersistToken) { sessionToken = value ?? ""; return; }
                 PlayerPrefs.SetString(KeyOnlineToken, value ?? "");
                 PlayerPrefs.Save();
             }
         }
+
+        /// <summary>
+        /// O token (e com ele as moedas) fica salvo no celular e no navegador. Só no PC (app de teste, várias janelas)
+        /// fica na memória, para cada janela ser um jogador diferente.
+        /// </summary>
+        private static bool PersistToken =>
+            Application.platform != RuntimePlatform.WindowsPlayer &&
+            Application.platform != RuntimePlatform.WindowsEditor &&
+            Application.platform != RuntimePlatform.OSXPlayer &&
+            Application.platform != RuntimePlatform.OSXEditor &&
+            Application.platform != RuntimePlatform.LinuxPlayer &&
+            Application.platform != RuntimePlatform.LinuxEditor;
 
         public static string PlayerName
         {

@@ -108,7 +108,7 @@ namespace Fodinha.EditorTools
                 Fodinha.Game.Menu.MenuScreen.Page.Home, Fodinha.Game.Menu.MenuScreen.Page.Offline,
                 Fodinha.Game.Menu.MenuScreen.Page.CreateRoom, Fodinha.Game.Menu.MenuScreen.Page.JoinRoom,
                 Fodinha.Game.Menu.MenuScreen.Page.PublicRooms, Fodinha.Game.Menu.MenuScreen.Page.Settings,
-                Fodinha.Game.Menu.MenuScreen.Page.HowToPlay
+                Fodinha.Game.Menu.MenuScreen.Page.HowToPlay, Fodinha.Game.Menu.MenuScreen.Page.Ranking
             };
             for (int i = 0; i < pages.Length; i++)
             {
@@ -118,6 +118,15 @@ namespace Fodinha.EditorTools
                     var menu = UiKit.Rect("Menu", root).Fill().gameObject.AddComponent<Fodinha.Game.Menu.MenuScreen>();
                     menu.ShowPage(page);
                     if (page == Fodinha.Game.Menu.MenuScreen.Page.JoinRoom) menu.CodeField.text = "k7m2q";
+                    if (page == Fodinha.Game.Menu.MenuScreen.Page.Home) menu.SetCoins(350, true);
+                    if (page == Fodinha.Game.Menu.MenuScreen.Page.Ranking)
+                        menu.ShowRanking(new[]
+                        {
+                            new Fodinha.Game.Menu.MenuScreen.RankingRow { Position = 1, Name = "Bia", Coins = 12500, Wins = 31 },
+                            new Fodinha.Game.Menu.MenuScreen.RankingRow { Position = 2, Name = "Zé", Coins = 4300, Wins = 9 },
+                            new Fodinha.Game.Menu.MenuScreen.RankingRow { Position = 3, Name = "Tião", Coins = 1200, Wins = 4 },
+                            new Fodinha.Game.Menu.MenuScreen.RankingRow { Position = 4, Name = "Você", Coins = 650, Wins = 2 }
+                        }, 4, 650);
                     if (page == Fodinha.Game.Menu.MenuScreen.Page.PublicRooms)
                         menu.SetPublicRooms(new[]
                         {

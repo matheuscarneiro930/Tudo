@@ -35,6 +35,9 @@ namespace Fodinha.Net
             public const string Play = "play";
             public const string Resume = "resume";
             public const string Ping = "ping";
+            public const string GetProfile = "get_profile";
+            public const string GetRanking = "get_ranking";
+            public const string ClaimReward = "claim_reward";
         }
 
         /// <summary>Mensagens do servidor para o cliente.</summary>
@@ -47,6 +50,8 @@ namespace Fodinha.Net
             public const string LeftRoom = "left_room";
             public const string Error = "error";
             public const string Pong = "pong";
+            public const string Profile = "profile";
+            public const string Ranking = "ranking";
         }
 
         private static readonly JsonSerializerSettings Settings = new JsonSerializerSettings
@@ -117,5 +122,7 @@ namespace Fodinha.Net
         public const string NotInMatch = "not_in_match";
         public const string Action = "action";
         public const string ServerFull = "server_full";
+        public const string NotEnoughCoins = "not_enough_coins";
+        public const string RewardUnavailable = "reward_unavailable";
     }
 }

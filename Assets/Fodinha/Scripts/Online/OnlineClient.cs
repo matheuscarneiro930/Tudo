@@ -62,6 +62,8 @@ namespace Fodinha.Online
         public string PlayerId { get; private set; }
         public RoomStateDto Room { get; private set; }
         public MatchUpdateDto LastMatch { get; private set; }
+        /// <summary>Última carteira recebida (moedas fictícias). Null antes de conectar.</summary>
+        public ProfileMsg Profile { get; private set; }
         public string ServerUrl { get; private set; }
 
         public event Action<ConnectionState> StateChanged;
@@ -70,6 +72,8 @@ namespace Fodinha.Online
         public event Action<MatchUpdateDto> MatchReceived;
         public event Action<ErrorMsg> ErrorReceived;
         public event Action<string> LeftRoom;
+        public event Action<ProfileMsg> ProfileReceived;
+        public event Action<RankingMsg> RankingReceived;
         /// <summary>Não foi possível conectar (mensagem para o jogador).</summary>
         public event Action<string> ConnectFailed;
 
@@ -148,6 +152,9 @@ namespace Fodinha.Online
         /// <summary>Envia um pedido. Se ainda não estiver conectado, guarda e envia logo após a apresentação.</summary>
         public void Send(string type, object payload = null)
         {
+            // Endereço do servidor mudou (Configurações): fecha a conexão antiga e conecta no novo.
+            if (State != ConnectionState.Offline && ServerUrl != GamePrefs.ServerUrl) CloseSocket();
+
             var json = Protocol.Encode(type, payload);
             if (IsConnected) SendNow(json);
             else
@@ -256,6 +263,18 @@ namespace Fodinha.Online
                     GamePrefs.OnlineToken = w.token;
                     welcomed = true;
                     while (pending.Count > 0) SendNow(pending.Dequeue());
+                    break;
+
+                case Protocol.ToClient.Profile:
+                    var prof = Protocol.Payload<ProfileMsg>(env);
+                    if (prof == null) return;
+                    Profile = prof;
+                    ProfileReceived?.Invoke(prof);
+                    break;
+
+                case Protocol.ToClient.Ranking:
+                    var rank = Protocol.Payload<RankingMsg>(env);
+                    if (rank != null) RankingReceived?.Invoke(rank);
                     break;
 
                 case Protocol.ToClient.RoomList:

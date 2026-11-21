@@ -19,6 +19,37 @@ namespace Fodinha.Net
         public string playerId;
         public string token;
         public string name;
+        public int coins;
+    }
+
+    /// <summary>Carteira e estatísticas do jogador (moedas fictícias, sem valor real).</summary>
+    public sealed class ProfileMsg
+    {
+        public int coins;
+        public int games;
+        public int wins;
+        /// <summary>Última variação (ex.: +300 por vencer, -100 pela entrada). 0 = só consulta.</summary>
+        public int delta;
+        /// <summary>Motivo da variação: "entrada", "vitoria", "reembolso", "recompensa".</summary>
+        public string reason;
+        /// <summary>Pode ganhar moedas assistindo um vídeo (tem menos que o mínimo).</summary>
+        public bool canClaimReward;
+    }
+
+    public sealed class RankEntry
+    {
+        public int position;
+        public string name;
+        public int coins;
+        public int wins;
+    }
+
+    public sealed class RankingMsg
+    {
+        public List<RankEntry> top = new List<RankEntry>();
+        /// <summary>Posição de quem pediu (1 = primeiro).</summary>
+        public int myPosition;
+        public int myCoins;
     }
 
     public sealed class CreateRoomMsg
@@ -92,6 +123,10 @@ namespace Fodinha.Net
         /// <summary>Id de quem recebe esta mensagem.</summary>
         public string you;
         public bool inMatch;
+        /// <summary>Valor da partida em moedas (0 = grátis).</summary>
+        public int stake;
+        /// <summary>Pote da partida em andamento (soma das entradas dos humanos).</summary>
+        public int pot;
         public List<MemberDto> members = new List<MemberDto>();
 
         public bool IAmOwner => you != null && you == ownerId;

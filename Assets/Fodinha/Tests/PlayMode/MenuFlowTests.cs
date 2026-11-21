@@ -12,6 +12,9 @@ namespace Fodinha.PlayMode.Tests
     /// <summary>Fluxo real: menu → jogar offline com N bots → partida → sair (confirmando) → menu.</summary>
     public class MenuFlowTests
     {
+        [SetUp] public void Isolate() => TestServerIsolation.Begin();
+        [TearDown] public void Restore() => TestServerIsolation.End();
+
         private static IEnumerator WaitForScene(string name, float timeout = 10f)
         {
             float t = 0f;

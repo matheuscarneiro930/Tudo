@@ -10,6 +10,9 @@ namespace Fodinha.PlayMode.Tests
     /// <summary>Carrega a cena real da partida offline e joga até o fim (com o bot no lugar do jogador).</summary>
     public class OfflineSceneTests
     {
+        [SetUp] public void Isolate() => TestServerIsolation.Begin();
+        [TearDown] public void Restore() => TestServerIsolation.End();
+
         [UnityTest]
         public IEnumerator CenaOffline_PartidaComBots_RodaAteOFim()
         {

@@ -40,6 +40,7 @@ namespace Fodinha.Online
             client.MatchReceived += session.Apply;
             client.ErrorReceived += OnError;
             client.LeftRoom += OnLeft;
+            client.ProfileReceived += OnProfile;
         }
 
         private void Start()
@@ -58,6 +59,7 @@ namespace Fodinha.Online
             client.MatchReceived -= session.Apply;
             client.ErrorReceived -= OnError;
             client.LeftRoom -= OnLeft;
+            client.ProfileReceived -= OnProfile;
         }
 
         private void Update()
@@ -66,6 +68,18 @@ namespace Fodinha.Online
             {
                 nextConnectionToast = Time.unscaledTime + 3f;
                 screen.ShowToast("Conexão perdida. Reconectando... (o bot joga por você)", 2.8f);
+            }
+        }
+
+        /// <summary>Moedas da partida: entrada paga, prêmio do vencedor ou devolução.</summary>
+        private void OnProfile(ProfileMsg p)
+        {
+            if (p.delta == 0) return;
+            switch (p.reason)
+            {
+                case "entrada": screen.ShowToast("Entrada: " + p.delta + " moedas (saldo " + p.coins + ")", 3f); break;
+                case "vitoria": screen.ShowToast("Você ganhou o pote: +" + p.delta + " moedas!", 5f); break;
+                case "reembolso": screen.ShowToast("Partida encerrada: +" + p.delta + " moedas devolvidas", 4f); break;
             }
         }
 

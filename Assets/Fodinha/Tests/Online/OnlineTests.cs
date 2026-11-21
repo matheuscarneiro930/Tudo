@@ -186,6 +186,24 @@ namespace Fodinha.Online.Tests
             client.Dispatch("lixo que não é json");
         }
 
+        [Test]
+        public void Perfil_AtualizaSaldo_ERanking()
+        {
+            ProfileMsg got = null;
+            client.ProfileReceived += p => got = p;
+            client.Dispatch(Protocol.Encode(Protocol.ToClient.Profile, new ProfileMsg { coins = 350, delta = 100, reason = "recompensa", canClaimReward = true }));
+            Assert.That(got.coins, Is.EqualTo(350));
+            Assert.That(client.Profile.canClaimReward, Is.True);
+
+            RankingMsg rank = null;
+            client.RankingReceived += r => rank = r;
+            var msg = new RankingMsg { myPosition = 3, myCoins = 350 };
+            msg.top.Add(new RankEntry { position = 1, name = "Bia", coins = 900 });
+            client.Dispatch(Protocol.Encode(Protocol.ToClient.Ranking, msg));
+            Assert.That(rank.top[0].name, Is.EqualTo("Bia"));
+            Assert.That(rank.myPosition, Is.EqualTo(3));
+        }
+
         [TestCase("wss://fodinha-server-0ccs.onrender.com/ws", "https://fodinha-server-0ccs.onrender.com/health")]
         [TestCase("ws://192.168.0.10:5080/ws", "http://192.168.0.10:5080/health")]
         [TestCase("nao e url", null)]

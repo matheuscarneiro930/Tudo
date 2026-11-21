@@ -13,6 +13,9 @@ namespace Fodinha.Hosting
         public bool InProgress;
         public int StartingLives = 3;
 
+        /// <summary>Valor da partida em moedas (0 = grátis).</summary>
+        public int Stake;
+
         public bool IsFull => Players >= MaxPlayers;
         public bool CanJoin => !IsFull && !InProgress;
     }

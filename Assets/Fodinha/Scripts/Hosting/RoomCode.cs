@@ -52,6 +52,12 @@ namespace Fodinha.Hosting
         public int MaxPlayers = 8;
         public RuleSet Rules = RuleSet.CreateDefault();
 
+        /// <summary>Valor da partida em moedas fictícias (cada jogador humano paga ao começar; o vencedor leva o pote).</summary>
+        public int Stake = 0;
+
+        /// <summary>Valores que o dono da sala pode escolher (0 = grátis).</summary>
+        public static readonly int[] AllowedStakes = { 0, 50, 100, 200, 500, 1000 };
+
         public RoomOptions Clone()
         {
             var copy = (RoomOptions)MemberwiseClone();
@@ -64,6 +70,8 @@ namespace Fodinha.Hosting
             var errors = Rules != null ? Rules.GetValidationErrors() : new List<string> { "Regras ausentes." };
             if (MaxPlayers < RuleSet.MinPlayers || MaxPlayers > RuleSet.MaxPlayers)
                 errors.Add("A sala deve ter entre " + RuleSet.MinPlayers + " e " + RuleSet.MaxPlayers + " jogadores.");
+            if (Array.IndexOf(AllowedStakes, Stake) < 0)
+                errors.Add("Valor da partida inválido.");
             return errors;
         }
     }

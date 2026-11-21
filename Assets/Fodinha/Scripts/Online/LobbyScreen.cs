@@ -156,6 +156,9 @@ namespace Fodinha.Online
             visibilityText.text = state.isPublic
                 ? "Sala pública: aparece na lista e qualquer um pode entrar"
                 : "Sala privada: só entra quem tiver o código";
+            visibilityText.text += state.stake > 0
+                ? "  ·  " + UiKit.Colored("valendo " + state.stake + " moedas (o vencedor leva tudo)", Palette.Accent)
+                : "  ·  grátis";
             playersTitle.text = "Jogadores  " + UiKit.Colored(state.members.Count + "/" + state.maxPlayers, Palette.TextMuted);
             rulesText.text = RulesSummary(state.rules);
 
@@ -226,7 +229,7 @@ namespace Fodinha.Online
         public void OpenRules()
         {
             if (room == null) return;
-            rulesEditor.Load(room.rules, room.maxPlayers, room.isPublic);
+            rulesEditor.Load(room.rules, room.maxPlayers, room.isPublic, room.stake);
             rulesOverlay.SetActive(true);
             rulesOverlay.transform.SetAsLastSibling();
         }
@@ -239,6 +242,7 @@ namespace Fodinha.Online
             {
                 IsPublic = rulesEditor.IsPublic,
                 MaxPlayers = rulesEditor.PlayerOrBotCount,
+                Stake = rulesEditor.Stake,
                 Rules = rulesEditor.BuildRules()
             };
             var errors = options.GetValidationErrors();

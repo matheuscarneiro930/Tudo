@@ -15,10 +15,35 @@ namespace Fodinha.Server
         public static Task Main(string[] args) => BuildApp(args).RunAsync();
 
         /// <summary>
+        /// Carrega as contas antes de abrir o servidor. Se o banco estiver configurado e falhar, NÃO sobe
+        /// (subir sem as contas criaria carteiras novas por cima das existentes). O Render tenta de novo sozinho.
+        /// </summary>
+        private static System.Collections.Generic.List<Account> LoadAccounts(IAccountStore store)
+        {
+            Exception last = null;
+            for (int attempt = 1; attempt <= 5; attempt++)
+            {
+                try
+                {
+                    var list = store.LoadAllAsync().GetAwaiter().GetResult();
+                    Console.WriteLine("[Fodinha] Contas carregadas (" + store.Kind + "): " + list.Count);
+                    return list;
+                }
+                catch (Exception e)
+                {
+                    last = e;
+                    Console.WriteLine("[Fodinha] Falha ao carregar contas (tentativa " + attempt + "): " + e.Message);
+                    System.Threading.Thread.Sleep(2000 * attempt);
+                }
+            }
+            throw new InvalidOperationException("Não foi possível carregar as contas do banco.", last);
+        }
+
+        /// <summary>
         /// Monta o servidor. Porta: variável PORT (padrão 5080). Para testes, <paramref name="options"/> permite
         /// trocar o ritmo (ex.: sem pausas) e <paramref name="urls"/> a porta.
         /// </summary>
-        public static WebApplication BuildApp(string[] args, ServerOptions options = null, string urls = null)
+        public static WebApplication BuildApp(string[] args, ServerOptions options = null, string urls = null, IAccountStore store = null)
         {
             var builder = WebApplication.CreateBuilder(args);
             string port = Environment.GetEnvironmentVariable("PORT") ?? "5080";
@@ -27,8 +52,22 @@ namespace Fodinha.Server
             var serverOptions = options ?? new ServerOptions();
             if (Environment.GetEnvironmentVariable("FODINHA_PACING") == "instant") serverOptions.Pacing = PacingSettings.Instant;
 
+            // Contas: Postgres (variável DATABASE_URL) ou memória (desenvolvimento/testes).
+            string databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+            store ??= string.IsNullOrWhiteSpace(databaseUrl) ? new MemoryAccountStore() : new PostgresAccountStore(databaseUrl);
+            var loaded = LoadAccounts(store);
+
             builder.Services.AddSingleton(serverOptions);
-            builder.Services.AddSingleton(sp => new ServerCore(sp.GetRequiredService<ServerOptions>()));
+            builder.Services.AddSingleton(store);
+            builder.Services.AddSingleton<AccountWriter>();
+            builder.Services.AddHostedService(sp => sp.GetRequiredService<AccountWriter>());
+            builder.Services.AddSingleton(sp =>
+            {
+                var book = new AccountBook(loaded);
+                var writer = sp.GetRequiredService<AccountWriter>();
+                book.Persist = writer.Enqueue;
+                return new ServerCore(sp.GetRequiredService<ServerOptions>(), null, book);
+            });
             builder.Services.AddSingleton<GameHost>();
             builder.Services.AddHostedService(sp => sp.GetRequiredService<GameHost>());
 
@@ -54,10 +93,11 @@ namespace Fodinha.Server
             app.UseRouting();
 
             app.MapGet("/info", () => "Fodinha Online - servidor no ar. Protocolo v" + Protocol.Version);
+            string storeKind = store.Kind;
             app.MapGet("/health", async (GameHost host) =>
             {
-                var stats = await host.Query(core => new { rooms = core.RoomCount, players = core.PlayerCount, connected = core.ConnectedCount });
-                return Results.Json(new { ok = true, protocol = Protocol.Version, stats.rooms, stats.players, stats.connected });
+                var stats = await host.Query(core => new { rooms = core.RoomCount, players = core.PlayerCount, connected = core.ConnectedCount, accounts = core.Accounts.Count });
+                return Results.Json(new { ok = true, protocol = Protocol.Version, storage = storeKind, stats.rooms, stats.players, stats.connected, stats.accounts });
             });
 
             app.Map(Protocol.Path, async (HttpContext ctx, GameHost host) =>

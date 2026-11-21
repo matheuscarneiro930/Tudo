@@ -20,6 +20,9 @@ namespace Fodinha.Server.Tests
         public ErrorMsg LastError;
         public LeftRoomMsg LastLeft;
         public RoomListMsg LastList;
+        public ProfileMsg Profile;
+        public RankingMsg LastRanking;
+        public WelcomeMsg Welcome;
         public int MatchUpdates;
 
         public FakeClient(ServerCore core, string name)
@@ -36,6 +39,7 @@ namespace Fodinha.Server.Tests
             {
                 case Protocol.ToClient.Welcome:
                     var w = Protocol.Payload<WelcomeMsg>(env);
+                    Welcome = w;
                     PlayerId = w.playerId;
                     Token = w.token;
                     break;
@@ -48,6 +52,8 @@ namespace Fodinha.Server.Tests
                 case Protocol.ToClient.Error: LastError = Protocol.Payload<ErrorMsg>(env); break;
                 case Protocol.ToClient.LeftRoom: LastLeft = Protocol.Payload<LeftRoomMsg>(env); Room = null; break;
                 case Protocol.ToClient.RoomList: LastList = Protocol.Payload<RoomListMsg>(env); break;
+                case Protocol.ToClient.Profile: Profile = Protocol.Payload<ProfileMsg>(env); break;
+                case Protocol.ToClient.Ranking: LastRanking = Protocol.Payload<RankingMsg>(env); break;
             }
         }
 

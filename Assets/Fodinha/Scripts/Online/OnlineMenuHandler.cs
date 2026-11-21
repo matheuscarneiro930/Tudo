@@ -16,7 +16,74 @@ namespace Fodinha.Online
     {
         private const float TimeoutSeconds = OnlineClient.ConnectTimeoutSeconds + 15f;
 
-        public void OnMenuOpened(MenuScreen screen) => OnlineClient.Instance.WakeUpServer();
+        /// <summary>Tempo do "vídeo" de recompensa enquanto o anúncio de verdade (AdMob) não está integrado.</summary>
+        public const float PlaceholderAdSeconds = 5f;
+
+        private MenuScreen current;
+        private bool subscribed;
+
+        /// <summary>Menu aberto: conecta, busca o saldo e mantém a carteira e o ranking atualizados na tela.</summary>
+        public void OnMenuOpened(MenuScreen screen)
+        {
+            current = screen;
+            var client = OnlineClient.Instance;
+            if (!subscribed)
+            {
+                subscribed = true;
+                client.ProfileReceived += OnProfile;
+                client.RankingReceived += OnRanking;
+                client.ConnectFailed += _ => { if (current != null) current.SetCoins(null, false); };
+                client.ErrorReceived += e =>
+                {
+                    if (current != null && e.code == ErrorCodes.RewardUnavailable) current.ShowToast(OnlineClient.Describe(e));
+                };
+            }
+            if (client.Profile != null) screen.SetCoins(client.Profile.coins, client.Profile.canClaimReward);
+            client.WakeUpServer();
+            client.Send(Protocol.ToServer.GetProfile);
+        }
+
+        private void OnProfile(ProfileMsg p)
+        {
+            if (current == null) return;
+            current.SetCoins(p.coins, p.canClaimReward);
+            if (p.delta > 0 && p.reason == "recompensa") current.ShowToast("+" + p.delta + " moedas!");
+        }
+
+        private void OnRanking(RankingMsg r)
+        {
+            if (current == null) return;
+            var rows = new List<MenuScreen.RankingRow>();
+            foreach (var e in r.top)
+                rows.Add(new MenuScreen.RankingRow { Position = e.position, Name = e.name, Coins = e.coins, Wins = e.wins });
+            current.ShowRanking(rows, r.myPosition, r.myCoins);
+        }
+
+        public void ShowRanking(MenuScreen screen)
+        {
+            current = screen;
+            OnlineClient.Instance.Send(Protocol.ToServer.GetRanking);
+        }
+
+        /// <summary>"Assista e ganhe 100 moedas". O servidor confere o saldo (menos de 500) e o intervalo.</summary>
+        public void ClaimReward(MenuScreen screen)
+        {
+            current = screen;
+            var client = OnlineClient.Instance;
+            client.StartCoroutine(PlaceholderAd(screen, () => client.Send(Protocol.ToServer.ClaimReward)));
+        }
+
+        private static IEnumerator PlaceholderAd(MenuScreen screen, Action done)
+        {
+            for (float t = PlaceholderAdSeconds; t > 0f; t -= Time.unscaledDeltaTime)
+            {
+                if (screen == null) yield break;
+                screen.SetBusy(true, "Anúncio\n\n" + UiKit.Colored("Seu vídeo aparece aqui em breve.\nGanhando 100 moedas em " + Mathf.CeilToInt(t) + "...", Palette.TextMuted));
+                yield return null;
+            }
+            if (screen != null) screen.SetBusy(false);
+            done();
+        }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Register()

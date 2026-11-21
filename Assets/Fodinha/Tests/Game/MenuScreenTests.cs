@@ -152,6 +152,59 @@ namespace Fodinha.Game.Tests
         }
 
         [Test]
+        public void Moedas_SaldoEBotaoDeGanhar()
+        {
+            menu.SetCoins(null, false);
+            Assert.That(menu.ShownCoins, Is.Null);
+            Assert.That(menu.ClaimVisible, Is.False);
+
+            menu.SetCoins(1500, false);
+            Assert.That(menu.ShownCoins, Is.EqualTo(1500));
+            Assert.That(menu.ClaimVisible, Is.False, "Com 500 ou mais não aparece.");
+
+            menu.SetCoins(200, true);
+            Assert.That(menu.ClaimVisible, Is.True);
+            bool claimed = false;
+            menu.ClaimRewardRequested += () => claimed = true;
+            menu.transform.Find("AreaSegura/Pagina_Home/Ganhar").GetComponent<Button>().onClick.Invoke();
+            Assert.That(claimed, Is.True);
+            Assert.That(MenuScreen.FormatCoins(12345), Is.EqualTo("12.345"));
+        }
+
+        [Test]
+        public void Ranking_PedeAoAbrir_EMostraLinhas()
+        {
+            bool asked = false;
+            menu.RankingRequested += () => asked = true;
+            menu.ShowPage(MenuScreen.Page.Ranking);
+            Assert.That(asked, Is.True);
+
+            menu.ShowRanking(new List<MenuScreen.RankingRow>
+            {
+                new MenuScreen.RankingRow { Position = 1, Name = "Bia", Coins = 900, Wins = 4 },
+                new MenuScreen.RankingRow { Position = 2, Name = "Zé", Coins = 600, Wins = 1 }
+            }, 2, 600);
+            Assert.That(menu.ListedRanking, Is.EqualTo(2));
+            var mine = menu.transform.Find("AreaSegura/Pagina_Ranking/Minha").GetComponent<Text>();
+            Assert.That(mine.text, Does.Contain("2º").And.Contain("600"));
+        }
+
+        [Test]
+        public void CriarSala_ComValorDaPartida()
+        {
+            menu.ShowPage(MenuScreen.Page.CreateRoom);
+            menu.RoomRules.Load(RuleSet.CreateDefault(), 4, true, 200);
+            RoomOptions received = null;
+            menu.CreateRoomRequested += o => received = o;
+            FooterOf(MenuScreen.Page.CreateRoom).onClick.Invoke();
+            Assert.That(received.Stake, Is.EqualTo(200));
+
+            menu.RoomRules.StakeStepper.SetIndex(0);
+            FooterOf(MenuScreen.Page.CreateRoom).onClick.Invoke();
+            Assert.That(received.Stake, Is.EqualTo(0), "Grátis.");
+        }
+
+        [Test]
         public void NomeDoJogador_EhLimpo()
         {
             Assert.That(GamePrefs.SanitizeName("  <b>Zé</b>  "), Is.EqualTo("bZé/b"));

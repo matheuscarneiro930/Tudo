@@ -19,6 +19,7 @@ namespace Fodinha.Game.UI
         private OptionStepper visibility;
         private OptionStepper turnTime;
         private OptionStepper timeouts;
+        private OptionStepper stake;
 
         public Mode EditorMode => mode;
 
@@ -41,6 +42,8 @@ namespace Fodinha.Game.UI
             {
                 visibility = OptionStepper.Create(content, "Sala", new[] { "Privada", "Pública" }, 1);
                 players = OptionStepper.Create(content, "Máx. jogadores", Range(RuleSet.MinPlayers, RuleSet.MaxPlayers, ""), 6);
+                stake = OptionStepper.Create(content, "Valor da partida",
+                                             Map(Hosting.RoomOptions.AllowedStakes, v => v == 0 ? "Grátis" : v + " moedas"), 0);
             }
 
             turnTime = OptionStepper.Create(content, "Tempo para jogar a carta", Map(TurnTimes, v => v + " s"), 2);
@@ -66,7 +69,7 @@ namespace Fodinha.Game.UI
 
         // ------------------------------------------------------------------ leitura/escrita
 
-        public void Load(RuleSet rules, int playerOrBotCount, bool isPublic = true)
+        public void Load(RuleSet rules, int playerOrBotCount, bool isPublic = true, int stakeValue = 0)
         {
             rules = rules ?? RuleSet.CreateDefault();
             if (mode == Mode.Offline) players.SetIndex(playerOrBotCount - OfflineMatchConfig.MinBots);
@@ -74,6 +77,7 @@ namespace Fodinha.Game.UI
             {
                 players.SetIndex(playerOrBotCount - RuleSet.MinPlayers);
                 visibility.SetIndex(isPublic ? 1 : 0);
+                stake.SetIndex(IndexOf(Hosting.RoomOptions.AllowedStakes, stakeValue, 0));
             }
 
             turnTime.SetIndex(IndexOf(TurnTimes, rules.TurnTimeSeconds, 2));
@@ -96,6 +100,11 @@ namespace Fodinha.Game.UI
             : RuleSet.MinPlayers + players.Index;
 
         public bool IsPublic => mode == Mode.Room && visibility.Index == 1;
+
+        /// <summary>Sala: valor da partida em moedas (0 = grátis).</summary>
+        public int Stake => mode == Mode.Room ? Hosting.RoomOptions.AllowedStakes[stake.Index] : 0;
+
+        public OptionStepper StakeStepper => stake;
 
         public OptionStepper PlayersStepper => players;
 

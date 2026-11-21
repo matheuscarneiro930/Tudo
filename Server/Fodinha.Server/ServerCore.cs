@@ -30,6 +30,13 @@ namespace Fodinha.Server
 
         public int MaxRooms = 2000;
         public int MaxPublicRoomsListed = 50;
+
+        /// <summary>Moedas por vídeo assistido, até o saldo chegar em <see cref="RewardCap"/>.</summary>
+        public int RewardAmount = 100;
+        public int RewardCap = AccountBook.StartingCoins;
+        /// <summary>Intervalo mínimo entre duas recompensas da mesma conta.</summary>
+        public float RewardCooldownSeconds = 20f;
+        public int RankingSize = 50;
         public PacingSettings Pacing = new PacingSettings();
     }
 
@@ -45,19 +52,22 @@ namespace Fodinha.Server
         private readonly Dictionary<IClientLink, Player> byLink = new Dictionary<IClientLink, Player>();
         private readonly Dictionary<string, Player> byToken = new Dictionary<string, Player>();
         private readonly Dictionary<string, Room> rooms = new Dictionary<string, Room>();
+        private readonly AccountBook accounts;
         private double now;
         private int idCounter;
 
-        public ServerCore(ServerOptions options = null, IRandomSource rng = null)
+        public ServerCore(ServerOptions options = null, IRandomSource rng = null, AccountBook accounts = null)
         {
             this.options = options ?? new ServerOptions();
             this.rng = rng ?? new SystemRandomSource();
+            this.accounts = accounts ?? new AccountBook();
         }
 
         public int RoomCount => rooms.Count;
         public int PlayerCount => byToken.Count;
         public int ConnectedCount => byLink.Count;
         public double Now => now;
+        public AccountBook Accounts => accounts;
 
         internal Room FindRoom(string code) => rooms.TryGetValue(code, out var r) ? r : null;
 
@@ -125,6 +135,9 @@ namespace Fodinha.Server
                 case Protocol.ToServer.Bet: HandleBet(player, Protocol.Payload<BetMsg>(env)); break;
                 case Protocol.ToServer.Play: HandlePlay(player, Protocol.Payload<PlayMsg>(env)); break;
                 case Protocol.ToServer.Resume: HandleResume(player); break;
+                case Protocol.ToServer.GetProfile: SendProfile(player, 0, null); break;
+                case Protocol.ToServer.GetRanking: HandleRanking(player); break;
+                case Protocol.ToServer.ClaimReward: HandleClaimReward(player); break;
                 default: SendError(link, ErrorCodes.BadMessage, "Tipo de mensagem desconhecido."); break;
             }
         }
@@ -199,20 +212,29 @@ namespace Fodinha.Server
             }
             else
             {
+                // Conta já salva (ex.: o servidor reiniciou) ou conta nova com 500 moedas.
+                var account = accounts.FindByToken(msg.token);
+                string token = account != null ? msg.token : Guid.NewGuid().ToString("N");
                 player = new Player
                 {
-                    Id = NewId("p"),
-                    Token = Guid.NewGuid().ToString("N"),
+                    Id = account?.Id ?? "p" + Guid.NewGuid().ToString("N").Substring(0, 12),
+                    Token = token,
                     Name = name
                 };
+                player.Account = account ?? accounts.Create(player.Id, token, name);
                 byToken[player.Token] = player;
             }
+            accounts.Rename(player.Account, player.Name);
 
             if (byLink.TryGetValue(link, out var previous) && previous != player) previous.Link = null;
             player.Link = link;
             byLink[link] = player;
 
-            link.Send(Protocol.Encode(Protocol.ToClient.Welcome, new WelcomeMsg { playerId = player.Id, token = player.Token, name = player.Name }));
+            link.Send(Protocol.Encode(Protocol.ToClient.Welcome, new WelcomeMsg
+            {
+                playerId = player.Id, token = player.Token, name = player.Name, coins = player.Account.Coins
+            }));
+            SendProfile(player, 0, null);
 
             var room = player.Room;
             if (room == null) return;
@@ -241,7 +263,8 @@ namespace Fodinha.Server
                     Players = r.Members.Count,
                     MaxPlayers = r.Options.MaxPlayers,
                     InProgress = r.InMatch,
-                    StartingLives = r.Options.Rules.StartingLives
+                    StartingLives = r.Options.Rules.StartingLives,
+                    Stake = r.Options.Stake
                 });
             }
             player.Send(Protocol.Encode(Protocol.ToClient.RoomList, list));
@@ -258,6 +281,11 @@ namespace Fodinha.Server
             if (rooms.Count >= options.MaxRooms)
             {
                 player.SendError(ErrorCodes.ServerFull, "Servidor lotado. Tente de novo em instantes.");
+                return;
+            }
+            if (opts.Stake > player.Account.Coins)
+            {
+                player.SendError(ErrorCodes.NotEnoughCoins, "Você não tem moedas suficientes para uma sala de " + opts.Stake + ".");
                 return;
             }
 
@@ -296,6 +324,11 @@ namespace Fodinha.Server
             if (room.Members.Count >= room.Options.MaxPlayers)
             {
                 player.SendError(ErrorCodes.RoomFull, "A sala está cheia.");
+                return;
+            }
+            if (room.Options.Stake > player.Account.Coins)
+            {
+                player.SendError(ErrorCodes.NotEnoughCoins, "Essa sala vale " + room.Options.Stake + " moedas e você tem " + player.Account.Coins + ".");
                 return;
             }
 
@@ -367,6 +400,29 @@ namespace Fodinha.Server
             {
                 player.SendError(ErrorCodes.NeedPlayers, "São necessários pelo menos 2 jogadores (adicione um bot).");
                 return;
+            }
+
+            // Sala valendo moedas: todo humano precisa ter o valor; ele sai do saldo agora e vai para o pote.
+            int stake = room.Options.Stake;
+            if (stake > 0)
+            {
+                var broke = room.Members.FirstOrDefault(m => !m.IsBot && m.Player.Account.Coins < stake);
+                if (broke != null)
+                {
+                    player.SendError(ErrorCodes.NotEnoughCoins, broke.Name + " não tem " + stake + " moedas para entrar.");
+                    return;
+                }
+            }
+            room.Pot = 0;
+            foreach (var m in room.Members.Where(m => !m.IsBot))
+            {
+                if (stake > 0)
+                {
+                    int paid = -accounts.AddCoins(m.Player.Account, -stake);
+                    room.Pot += paid;
+                    SendProfile(m.Player, -paid, "entrada");
+                }
+                m.Stake = stake;
             }
 
             var names = room.Members.Select(m => m.Name).ToList();
@@ -507,6 +563,21 @@ namespace Fodinha.Server
 
         private void EndMatch(Room room)
         {
+            // Acerto: o vencedor (se for humano) leva o pote; todos os humanos contam a partida.
+            int winnerSeat = room.Engine.WinnerSeat;
+            foreach (var m in room.Members.Where(m => !m.IsBot))
+            {
+                bool won = m.Seat == winnerSeat;
+                accounts.RecordGame(m.Player.Account, won);
+                if (won && room.Pot > 0)
+                {
+                    accounts.AddCoins(m.Player.Account, room.Pot);
+                    SendProfile(m.Player, room.Pot, "vitoria");
+                }
+                else SendProfile(m.Player, 0, null);
+            }
+            room.Pot = 0;
+
             room.InMatch = false;
             room.Director.EventRaised -= room.PendingEvents.Add;
             // Quem saiu ou não voltou perde o lugar; bots e conectados continuam na sala para a revanche.
@@ -530,6 +601,17 @@ namespace Fodinha.Server
         private void DeleteRoom(Room room, string reason)
         {
             rooms.Remove(room.Code);
+
+            // Partida encerrada antes do fim (ex.: abandonada): quem não saiu recebe a entrada de volta.
+            if (room.InMatch && room.Pot > 0)
+            {
+                foreach (var m in room.Members.Where(m => !m.IsBot && !m.Left && m.Stake > 0))
+                {
+                    accounts.AddCoins(m.Player.Account, m.Stake);
+                    SendProfile(m.Player, m.Stake, "reembolso");
+                }
+                room.Pot = 0;
+            }
             foreach (var m in room.Members)
             {
                 if (m.IsBot || m.Player.Room != room) continue;
@@ -576,6 +658,55 @@ namespace Fodinha.Server
             }
         }
 
+        // ------------------------------------------------------------------ carteira e ranking
+
+        private void SendProfile(Player player, int delta, string reason)
+        {
+            var a = player.Account;
+            if (a == null) return;
+            player.Send(Protocol.Encode(Protocol.ToClient.Profile, new ProfileMsg
+            {
+                coins = a.Coins,
+                games = a.Games,
+                wins = a.Wins,
+                delta = delta,
+                reason = reason,
+                canClaimReward = a.Coins < options.RewardCap
+            }));
+        }
+
+        private void HandleRanking(Player player)
+        {
+            var all = accounts.Ranking();
+            var msg = new RankingMsg { myCoins = player.Account.Coins };
+            for (int i = 0; i < all.Count; i++)
+            {
+                if (i < options.RankingSize)
+                    msg.top.Add(new RankEntry { position = i + 1, name = all[i].Name, coins = all[i].Coins, wins = all[i].Wins });
+                if (all[i] == player.Account) msg.myPosition = i + 1;
+            }
+            player.Send(Protocol.Encode(Protocol.ToClient.Ranking, msg));
+        }
+
+        /// <summary>Recompensa por vídeo: +100 moedas, só enquanto o saldo estiver abaixo de 500, com intervalo mínimo.</summary>
+        private void HandleClaimReward(Player player)
+        {
+            var a = player.Account;
+            if (a.Coins >= options.RewardCap)
+            {
+                player.SendError(ErrorCodes.RewardUnavailable, "Você já tem " + a.Coins + " moedas. O vídeo é para quem tem menos de " + options.RewardCap + ".");
+                return;
+            }
+            if (now - a.LastRewardAt < options.RewardCooldownSeconds)
+            {
+                player.SendError(ErrorCodes.RewardUnavailable, "Aguarde alguns segundos para o próximo vídeo.");
+                return;
+            }
+            a.LastRewardAt = now;
+            int gained = accounts.AddCoins(a, Math.Min(options.RewardAmount, options.RewardCap - a.Coins));
+            SendProfile(player, gained, "recompensa");
+        }
+
         private static void SendError(IClientLink link, string code, string message)
         {
             link.Send(Protocol.Encode(Protocol.ToClient.Error, new ErrorMsg { code = code, message = message }));
@@ -610,6 +741,7 @@ namespace Fodinha.Server
             public IClientLink Link;
             public Room Room;
             public double DisconnectedAt;
+            public Account Account;   // carteira (persistida)
 
             public void Send(string json) => Link?.Send(json);
 
@@ -625,6 +757,7 @@ namespace Fodinha.Server
             public string BotName;
             public int Seat = -1;     // assento na partida atual
             public bool Left;         // saiu no meio da partida
+            public int Stake;         // quanto pagou para entrar na partida atual
 
             public string Name => IsBot ? BotName : Player.Name;
         }
@@ -641,6 +774,7 @@ namespace Fodinha.Server
             public int PublishedVersion = -1;
             public readonly List<MatchEvent> PendingEvents = new List<MatchEvent>();
             public double AbandonedSince = -1;
+            public int Pot;           // soma das entradas da partida atual
 
             public Room(string code, RoomOptions options)
             {
@@ -668,7 +802,9 @@ namespace Fodinha.Server
                     rules = Options.Rules,
                     ownerId = OwnerId,
                     you = you,
-                    inMatch = InMatch
+                    inMatch = InMatch,
+                    stake = Options.Stake,
+                    pot = Pot
                 };
                 foreach (var m in Members)
                 {

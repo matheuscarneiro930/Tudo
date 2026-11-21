@@ -40,6 +40,8 @@ namespace Fodinha.Game.Menu
             screen.CreateRoomRequested += options => WithOnline(h => h.CreateRoom(screen, options));
             screen.JoinRoomRequested += code => WithOnline(h => h.JoinRoom(screen, code));
             screen.RefreshRoomsRequested += () => WithOnline(h => h.RefreshPublicRooms(screen), quiet: true);
+            screen.RankingRequested += () => WithOnline(h => h.ShowRanking(screen));
+            screen.ClaimRewardRequested += () => WithOnline(h => h.ClaimReward(screen));
             OnlineHandler?.OnMenuOpened(screen);
         }
 
@@ -76,5 +78,8 @@ namespace Fodinha.Game.Menu
         void CreateRoom(MenuScreen screen, RoomOptions options);
         void JoinRoom(MenuScreen screen, string code);
         void RefreshPublicRooms(MenuScreen screen);
+        void ShowRanking(MenuScreen screen);
+        /// <summary>Assistir um vídeo e ganhar moedas (só com menos de 500).</summary>
+        void ClaimReward(MenuScreen screen);
     }
 }

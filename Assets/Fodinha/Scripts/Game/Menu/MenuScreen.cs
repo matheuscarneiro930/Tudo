@@ -14,7 +14,7 @@ namespace Fodinha.Game.Menu
     /// </summary>
     public sealed class MenuScreen : MonoBehaviour
     {
-        public enum Page { Home, Offline, CreateRoom, JoinRoom, PublicRooms, Settings, HowToPlay }
+        public enum Page { Home, Offline, CreateRoom, JoinRoom, PublicRooms, Settings, HowToPlay, Ranking }
 
         private readonly Dictionary<Page, GameObject> pages = new Dictionary<Page, GameObject>();
         private bool built;
@@ -41,6 +41,8 @@ namespace Fodinha.Game.Menu
         public event Action<RoomOptions> CreateRoomRequested;
         public event Action<string> JoinRoomRequested;
         public event Action RefreshRoomsRequested;
+        public event Action RankingRequested;
+        public event Action ClaimRewardRequested;
 
         public Page CurrentPage { get; private set; } = Page.Home;
         public RulesEditor OfflineRules => offlineRules;
@@ -80,11 +82,14 @@ namespace Fodinha.Game.Menu
                     break;
                 case Page.CreateRoom:
                     var opts = GamePrefs.LastRoomOptions;
-                    roomRules.Load(opts.Rules, opts.MaxPlayers, opts.IsPublic);
+                    roomRules.Load(opts.Rules, opts.MaxPlayers, opts.IsPublic, opts.Stake);
                     break;
                 case Page.JoinRoom:
                     codeField.text = "";
                     OnCodeChanged("");
+                    break;
+                case Page.Ranking:
+                    RankingRequested?.Invoke();
                     break;
                 case Page.PublicRooms:
                     RefreshRoomsRequested?.Invoke();
@@ -123,6 +128,7 @@ namespace Fodinha.Game.Menu
             BuildPublicRooms();
             BuildSettings();
             BuildHowToPlay();
+            BuildRanking();
 
             toastBg = UiKit.Image("Aviso", safeRoot, new Color(0.08f, 0.08f, 0.08f, 0.94f), SpriteFactory.RoundedRect, 1.2f);
             toastBg.rectTransform.Anchor(0.06f, 0.13f, 0.94f, 0.2f);
@@ -170,7 +176,9 @@ namespace Fodinha.Game.Menu
             var page = NewPage(Page.Home, null);
 
             // Leque de cartas decorativo (as manilhas fixas + um 3).
-            var fan = UiKit.Rect("Leque", page).Anchor(0.1f, 0.71f, 0.9f, 0.95f);
+            BuildWalletRow(page);
+
+            var fan = UiKit.Rect("Leque", page).Anchor(0.1f, 0.71f, 0.9f, 0.94f);
             string[] cards = { "7O", "AE", "4P", "7C", "3P" };
             for (int i = 0; i < cards.Length; i++)
             {
@@ -347,6 +355,7 @@ namespace Fodinha.Game.Menu
             {
                 IsPublic = roomRules.IsPublic,
                 MaxPlayers = roomRules.PlayerOrBotCount,
+                Stake = roomRules.Stake,
                 Rules = roomRules.BuildRules()
             };
             var errors = options.GetValidationErrors();
@@ -396,7 +405,7 @@ namespace Fodinha.Game.Menu
                 var name = UiKit.Label("Nome", row.transform, "Mesa de " + room.HostName, 40, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
                 name.rectTransform.Anchor(0.04f, 0.5f, 0.66f, 0.92f);
                 string status = room.InProgress ? "em jogo" : room.IsFull ? "cheia" : "aguardando";
-                var info = UiKit.Label("Info", row.transform, room.Players + "/" + room.MaxPlayers + " jogadores · " + room.StartingLives + " vidas · " + status,
+                var info = UiKit.Label("Info", row.transform, room.Players + "/" + room.MaxPlayers + " jogadores · " + (room.Stake > 0 ? "valendo " + room.Stake + " moedas" : "grátis") + " · " + status,
                                        30, Palette.TextMuted, TextAnchor.MiddleLeft, FontStyle.Normal, true);
                 info.rectTransform.Anchor(0.04f, 0.1f, 0.66f, 0.5f);
                 string code = room.Code;
@@ -415,6 +424,96 @@ namespace Fodinha.Game.Menu
             toastBg.gameObject.SetActive(true);
             toastBg.transform.SetAsLastSibling();
             toastUntil = Time.unscaledTime + seconds;
+        }
+
+        // ------------------------------------------------------------------ moedas e ranking
+
+        private Text coinsText;
+        private Button claimButton;
+        private RectTransform rankingList;
+        private Text rankingMine;
+
+        /// <summary>Uma linha do ranking (dados simples, vindos da camada online).</summary>
+        public struct RankingRow
+        {
+            public int Position;
+            public string Name;
+            public int Coins;
+            public int Wins;
+        }
+
+        public int? ShownCoins { get; private set; }
+        public bool ClaimVisible => claimButton != null && claimButton.gameObject.activeSelf;
+        public int ListedRanking { get; private set; }
+
+        private void BuildWalletRow(RectTransform page)
+        {
+            var badge = UiKit.Image("Carteira", page, Palette.Panel, SpriteFactory.RoundedRect, 1.5f);
+            badge.rectTransform.Anchor(0.04f, 0.948f, 0.46f, 0.992f);
+            var coin = UiKit.Image("Moeda", badge.transform, Palette.Accent, SpriteFactory.Circle);
+            coin.rectTransform.Anchor(0.04f, 0.15f, 0.16f, 0.85f);
+            coin.preserveAspect = true;
+            var c = UiKit.Label("M", coin.transform, "$", 40, Palette.AccentDark, TextAnchor.MiddleCenter, FontStyle.Bold, true);
+            c.rectTransform.Fill();
+            coinsText = UiKit.Label("Moedas", badge.transform, "—", 38, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
+            coinsText.rectTransform.Anchor(0.2f, 0.08f, 0.97f, 0.92f);
+
+            claimButton = UiKit.Button("Ganhar", page, "+100", () => ClaimRewardRequested?.Invoke(), Palette.Good, Palette.ButtonText, 36);
+            claimButton.GetComponent<RectTransform>().Anchor(0.48f, 0.948f, 0.64f, 0.992f);
+            claimButton.gameObject.SetActive(false);
+
+            var rank = UiKit.Button("Ranking", page, "Ranking", () => ShowPage(Page.Ranking), Palette.ButtonSecondary, Palette.Text, 34);
+            rank.GetComponent<RectTransform>().Anchor(0.66f, 0.948f, 0.96f, 0.992f);
+        }
+
+        /// <summary>Mostra o saldo (null = sem conexão) e o botão de ganhar moedas.</summary>
+        public void SetCoins(int? coins, bool canClaim)
+        {
+            EnsureBuilt();
+            ShownCoins = coins;
+            coinsText.text = coins.HasValue ? FormatCoins(coins.Value) : "—";
+            claimButton.gameObject.SetActive(coins.HasValue && canClaim);
+        }
+
+        public static string FormatCoins(int coins) => coins.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("pt-BR"));
+
+        private void BuildRanking()
+        {
+            var page = NewPage(Page.Ranking, "Ranking");
+            rankingList = UiControls.ScrollArea("Lista", page, 10f);
+            ((RectTransform)rankingList.parent).Anchor(0.04f, 0.2f, 0.96f, 0.915f);
+            rankingMine = UiKit.Label("Minha", page, "", 38, Palette.Accent, TextAnchor.MiddleCenter, FontStyle.Bold, true);
+            rankingMine.rectTransform.Anchor(0.05f, 0.12f, 0.95f, 0.19f);
+            Footer(page, "Atualizar", () => RankingRequested?.Invoke());
+        }
+
+        public void ShowRanking(IReadOnlyList<RankingRow> rows, int myPosition, int myCoins)
+        {
+            EnsureBuilt();
+            UiKit.DestroyChildren(rankingList);
+            ListedRanking = rows?.Count ?? 0;
+            if (rows != null)
+            {
+                foreach (var r in rows)
+                {
+                    var row = UiKit.Image("Pos" + r.Position, rankingList, Palette.Panel, SpriteFactory.RoundedRect, 1.5f);
+                    UiControls.SetHeight(row, 92f);
+                    Color medal = r.Position == 1 ? Palette.Accent : r.Position == 2 ? Palette.Hex("C9D1D9") : r.Position == 3 ? Palette.Hex("D08B4F") : Palette.TextMuted;
+                    var pos = UiKit.Label("Posicao", row.transform, r.Position + "º", 40, medal, TextAnchor.MiddleCenter, FontStyle.Bold, true);
+                    pos.rectTransform.Anchor(0.02f, 0.1f, 0.14f, 0.9f);
+                    var name = UiKit.Label("Nome", row.transform, r.Name, 38, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
+                    name.rectTransform.Anchor(0.16f, 0.1f, 0.6f, 0.9f);
+                    var coins = UiKit.Label("Moedas", row.transform, FormatCoins(r.Coins) + UiKit.Colored("  moedas", Palette.TextMuted),
+                                            34, Palette.Accent, TextAnchor.MiddleRight, FontStyle.Bold, true);
+                    coins.rectTransform.Anchor(0.6f, 0.4f, 0.97f, 0.95f);
+                    var wins = UiKit.Label("Vitorias", row.transform, r.Wins + (r.Wins == 1 ? " vitória" : " vitórias"),
+                                           26, Palette.TextMuted, TextAnchor.MiddleRight, FontStyle.Normal, true);
+                    wins.rectTransform.Anchor(0.6f, 0.05f, 0.97f, 0.42f);
+                }
+            }
+            rankingMine.text = myPosition > 0
+                ? "Você está em " + myPosition + "º com " + FormatCoins(myCoins) + " moedas"
+                : "Jogue online para entrar no ranking";
         }
 
         /// <summary>Tela de "aguarde" (conectando, criando sala...).</summary>
