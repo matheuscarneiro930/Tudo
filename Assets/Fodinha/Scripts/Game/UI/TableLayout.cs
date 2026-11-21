@@ -40,6 +40,26 @@ namespace Fodinha.Game.UI
             return new Vector2(0.5f + direction.x * SeatRadiusX, 0.5f + direction.y * SeatRadiusY);
         }
 
+        /// <summary>
+        /// Empurra o assento para dentro da área quando ele sairia pela borda (assentos das laterais).
+        /// Sem tamanho conhecido da área (0), devolve a âncora como está.
+        /// </summary>
+        public static Vector2 ClampSeatAnchor(Vector2 anchor, Vector2 seatSize, Vector2 areaSize)
+        {
+            const float margin = 6f;
+            if (areaSize.x > 0f)
+            {
+                float half = (seatSize.x * 0.5f + margin) / areaSize.x;
+                anchor.x = half >= 0.5f ? 0.5f : Mathf.Clamp(anchor.x, half, 1f - half);
+            }
+            if (areaSize.y > 0f)
+            {
+                float half = (seatSize.y * 0.5f + margin) / areaSize.y;
+                anchor.y = half >= 0.5f ? 0.5f : Mathf.Clamp(anchor.y, half, 1f - half);
+            }
+            return anchor;
+        }
+
         /// <summary>Âncora (0..1) da carta jogada por quem está naquela direção.</summary>
         public static Vector2 TrickAnchor(Vector2 direction)
         {
@@ -53,7 +73,8 @@ namespace Fodinha.Game.UI
             if (opponents <= 4) return 1f;
             if (opponents <= 7) return 0.8f;
             if (opponents <= 10) return 0.7f;
-            return 0.6f;
+            if (opponents <= 12) return 0.54f;
+            return 0.47f; // 14–15 na mesa: os dois do topo ficam lado a lado
         }
 
         /// <summary>Altura das cartas da vaza no centro, conforme a lotação.</summary>

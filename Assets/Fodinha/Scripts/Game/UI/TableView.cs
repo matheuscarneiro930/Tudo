@@ -100,7 +100,7 @@ namespace Fodinha.Game.UI
                 if (seats.Count <= index) seats.Add(SeatView.Create(seatsLayer));
                 var sv = seats[index++];
                 sv.gameObject.SetActive(true);
-                sv.Rect.Place(TableLayout.SeatAnchor(dir), SeatView.BaseSize);
+                sv.Rect.Place(TableLayout.ClampSeatAnchor(TableLayout.SeatAnchor(dir), SeatView.BaseSize * scale, seatsLayer.rect.size), SeatView.BaseSize);
                 sv.Rect.localScale = new Vector3(scale, scale, 1f);
                 var p = view.Players[seat];
                 bool isTurn = view.CurrentSeat == seat && (view.Phase == MatchPhase.Betting || view.Phase == MatchPhase.Playing);

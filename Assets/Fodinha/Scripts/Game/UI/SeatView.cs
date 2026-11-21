@@ -10,7 +10,11 @@ namespace Fodinha.Game.UI
     /// </summary>
     public sealed class SeatView : MonoBehaviour
     {
-        public static readonly Vector2 BaseSize = new Vector2(232f, 150f);
+        /// <summary>Tamanho total: avatar (fora do quadrado) + quadrado com nome, vidas e carta.</summary>
+        public static readonly Vector2 BaseSize = new Vector2(300f, 150f);
+        public const float AvatarSize = 96f;
+        public const float AvatarGap = 6f;
+        public static readonly Vector2 MiniCardSize = new Vector2(70f, 100f);
 
         private CanvasGroup group;
         private Image glow;
@@ -49,56 +53,61 @@ namespace Fodinha.Game.UI
             group = gameObject.AddComponent<CanvasGroup>();
             group.blocksRaycasts = false;
 
-            glow = UiKit.Image("Brilho", rt, new Color(Palette.Accent.r, Palette.Accent.g, Palette.Accent.b, 0.55f), SpriteFactory.SoftGlow);
+            // Avatar à esquerda, FORA do quadrado; o quadrado fica só com nome, vidas e a carta (maior).
+            avatar = AvatarView.Create(rt, "Avatar");
+            avatar.Image.rectTransform.Place(new Vector2(AvatarSize * 0.5f / BaseSize.x, 0.5f), new Vector2(AvatarSize, AvatarSize));
+
+            var box = UiKit.Rect("Caixa", rt);
+            box.Anchor((AvatarSize + AvatarGap) / BaseSize.x, 0f, 1f, 1f);
+
+            glow = UiKit.Image("Brilho", box, new Color(Palette.Accent.r, Palette.Accent.g, Palette.Accent.b, 0.55f), SpriteFactory.SoftGlow);
             glow.rectTransform.Fill();
             glow.rectTransform.offsetMin = new Vector2(-50f, -50f);
             glow.rectTransform.offsetMax = new Vector2(50f, 50f);
             glow.gameObject.AddComponent<Pulse>();
 
-            panel = UiKit.Image("Painel", rt, Palette.Panel, SpriteFactory.RoundedRect, 1.6f);
+            panel = UiKit.Image("Painel", box, Palette.Panel, SpriteFactory.RoundedRect, 1.6f);
             panel.rectTransform.Fill();
 
-            outline = UiKit.Image("Contorno", rt, Palette.Accent, SpriteFactory.RoundedOutline, 1.6f);
+            outline = UiKit.Image("Contorno", box, Palette.Accent, SpriteFactory.RoundedOutline, 1.6f);
             outline.rectTransform.Fill();
 
-            avatar = AvatarView.Create(rt, "Avatar");
-            avatar.Image.rectTransform.Anchor(0.015f, 0.36f, 0.33f, 0.985f);
-
-            nameText = UiKit.Label("Nome", rt, "", 34, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
-            nameText.rectTransform.Anchor(0.35f, 0.68f, 0.75f, 0.97f);
+            nameText = UiKit.Label("Nome", box, "", 34, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
+            nameText.rectTransform.Anchor(0.06f, 0.68f, 0.62f, 0.97f);
 
             // Vidas: coração desenhado + número (o símbolo ♥ da fonte não aparece no navegador).
-            heartIcon = UiKit.Image("Coracao", rt, Palette.Heart, SpriteFactory.Suit(Suit.Hearts));
+            heartIcon = UiKit.Image("Coracao", box, Palette.Heart, SpriteFactory.Suit(Suit.Hearts));
             heartIcon.preserveAspect = true;
             heartIcon.raycastTarget = false;
-            heartIcon.rectTransform.Anchor(0.35f, 0.42f, 0.46f, 0.66f);
-            livesText = UiKit.Label("Vidas", rt, "", 34, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
-            livesText.rectTransform.Anchor(0.48f, 0.40f, 0.74f, 0.68f);
+            heartIcon.rectTransform.Anchor(0.06f, 0.42f, 0.2f, 0.66f);
+            livesText = UiKit.Label("Vidas", box, "", 34, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
+            livesText.rectTransform.Anchor(0.22f, 0.40f, 0.6f, 0.68f);
 
-            betText = UiKit.Label("Fez", rt, "", 28, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Normal, true);
-            betText.rectTransform.Anchor(0.05f, 0.04f, 0.70f, 0.38f);
+            betText = UiKit.Label("Fez", box, "", 28, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Normal, true);
+            betText.rectTransform.Anchor(0.06f, 0.04f, 0.62f, 0.38f);
 
             // Carta à direita: mostra a APOSTA do jogador (na rodada cega, a carta dele).
-            miniCard = CardView.Create(rt, "Aposta");
-            miniCard.Rect.Place(new Vector2(0.855f, 0.62f), new Vector2(50f, 72f));
+            miniCard = CardView.Create(box, "Aposta");
+            miniCard.Rect.Place(new Vector2(0.80f, 0.6f), MiniCardSize);
             miniCard.SetShadow(false);
             miniCard.SetInteractable(false);
 
-            betCaption = UiKit.Label("Legenda", rt, "aposta", 22, Palette.TextMuted, TextAnchor.MiddleCenter, FontStyle.Normal, true);
-            betCaption.rectTransform.Anchor(0.70f, 0.02f, 1.0f, 0.24f);
+            betCaption = UiKit.Label("Legenda", box, "aposta", 22, Palette.TextMuted, TextAnchor.MiddleCenter, FontStyle.Normal, true);
+            betCaption.rectTransform.Anchor(0.6f, 0.0f, 1.0f, 0.22f);
 
-            countText = UiKit.Label("Numero", miniCard.Rect, "", 40, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold, true);
+            countText = UiKit.Label("Numero", miniCard.Rect, "", 54, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold, true);
             countText.rectTransform.Fill();
             var countOutline = countText.gameObject.AddComponent<Outline>();
             countOutline.effectColor = new Color(0f, 0f, 0f, 0.8f);
             countOutline.effectDistance = new Vector2(2f, -2f);
 
+            // Distribuidor: ficha no canto de baixo do avatar.
             dealerChip = UiKit.Image("Distribuidor", rt, Palette.Accent, SpriteFactory.Circle);
-            dealerChip.rectTransform.Place(new Vector2(0.29f, 0.42f), new Vector2(42f, 42f));
+            dealerChip.rectTransform.Place(new Vector2((AvatarSize - 12f) / BaseSize.x, 0.24f), new Vector2(42f, 42f));
             var d = UiKit.Label("D", dealerChip.transform, "D", 30, Palette.AccentDark, TextAnchor.MiddleCenter, FontStyle.Bold);
             d.rectTransform.Fill();
 
-            timer = TimerBar.Create(rt);
+            timer = TimerBar.Create(box);
             timer.GetComponent<RectTransform>().Anchor(0.04f, -0.14f, 0.96f, -0.04f);
         }
 
