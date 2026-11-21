@@ -21,6 +21,7 @@ namespace Fodinha.Core.Tests
                 TurnTimeSeconds = 45,
                 MaxCardsPerPlayer = 6,
                 TimeoutsBeforeAutoPlay = 3,
+                BetTimeSeconds = 50,
                 ManilhaMode = ManilhaMode.Fixed,
                 TieRule = TieRule.CancelOut,
                 LastBidderRestriction = false,
@@ -39,9 +40,10 @@ namespace Fodinha.Core.Tests
             Assert.AreEqual(CardProgression.UpThenHold, official.Progression);
             Assert.IsTrue(official.BlindOneCardRounds);
 
-            Assert.AreEqual(5, official.StartingLives);
+            Assert.AreEqual(3, official.StartingLives, "Sempre 3 vidas.");
             Assert.AreEqual(45, official.TurnTimeSeconds);
-            Assert.AreEqual(6, official.MaxCardsPerPlayer);
+            Assert.AreEqual(0, official.MaxCardsPerPlayer, "Sem teto de cartas.");
+            Assert.AreEqual(30, official.BetTimeSeconds, "30 s para apostar.");
             Assert.AreEqual(3, official.TimeoutsBeforeAutoPlay);
 
             Assert.IsFalse(custom.FollowsOfficialRules, "O original não é alterado.");

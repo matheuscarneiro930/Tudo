@@ -103,10 +103,12 @@ namespace Fodinha.Server.Tests
             opts.Rules.TieRule = TieRule.CancelOut;
             opts.Rules.LifeLossMode = LifeLossMode.Difference;
             opts.Rules.BlindOneCardRounds = false;
-            opts.Rules.StartingLives = 4;
+            opts.Rules.StartingLives = 5;
+            opts.Rules.TurnTimeSeconds = 45;
             c.Create(opts);
             Assert.That(c.Room.rules.FollowsOfficialRules, Is.True);
-            Assert.That(c.Room.rules.StartingLives, Is.EqualTo(4), "O que é configurável é mantido.");
+            Assert.That(c.Room.rules.StartingLives, Is.EqualTo(3), "Sempre 3 vidas.");
+            Assert.That(c.Room.rules.TurnTimeSeconds, Is.EqualTo(45), "O que é configurável é mantido.");
 
             opts.Rules.ManilhaMode = ManilhaMode.Fixed;
             c.Do(Protocol.ToServer.UpdateOptions, new UpdateOptionsMsg { options = opts });
@@ -194,10 +196,10 @@ namespace Fodinha.Server.Tests
             Assert.That(owner.LastError.code, Is.EqualTo(ErrorCodes.InvalidOptions));
 
             var opts = new RoomOptions { MaxPlayers = 10, IsPublic = false };
-            opts.Rules.StartingLives = 5;
+            opts.Rules.TurnTimeSeconds = 50;
             owner.Do(Protocol.ToServer.UpdateOptions, new UpdateOptionsMsg { options = opts });
             Assert.That(owner.Room.maxPlayers, Is.EqualTo(10));
-            Assert.That(owner.Room.rules.StartingLives, Is.EqualTo(5));
+            Assert.That(owner.Room.rules.TurnTimeSeconds, Is.EqualTo(50));
             Assert.That(owner.Room.isPublic, Is.False);
         }
 
@@ -337,11 +339,41 @@ namespace Fodinha.Server.Tests
             core.OnDisconnected(bia);
             Assert.That(owner.Room.members.Single(m => m.name == "Bia").connected, Is.False);
 
-            for (int i = 0; i < 30; i++) core.Tick(1f);
+            for (int i = 0; i < 290; i++) core.Tick(1f);
             Assert.That(owner.Room.members.Count, Is.EqualTo(2), "Ainda dentro do prazo.");
-            for (int i = 0; i < 40; i++) core.Tick(1f);
+            for (int i = 0; i < 20; i++) core.Tick(1f);
             core.OnMessage(owner, Protocol.Encode(Protocol.ToServer.JoinRoom, new JoinRoomMsg { code = code }));
             Assert.That(owner.Room.members.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void CaiuNaPartida_Tem5MinutosParaVoltar_DepoisPerdeOLugar()
+        {
+            // Ritmo normal (a partida anda devagar) e prazo curto, só para o teste: a lógica é a mesma dos 5 minutos.
+            Assert.That(new ServerOptions().MatchReconnectSeconds, Is.EqualTo(300f), "Padrão: 5 minutos.");
+            core = new ServerCore(new ServerOptions { MatchReconnectSeconds = 20f }, new SystemRandomSource(7));
+            var (owner, code) = OwnerWithRoom();
+            var bia = Client("Bia");
+            bia.Join(code);
+            var caio = Client("Caio");
+            caio.Join(code);
+            owner.Do(Protocol.ToServer.StartMatch);
+            int biaSeat = bia.MySeat;
+
+            core.OnDisconnected(bia);
+            for (int i = 0; i < 15; i++) core.Tick(1f);
+            Assert.That(owner.Match.view.phase, Is.Not.EqualTo((int)MatchPhase.MatchOver));
+
+            // Ainda dentro do prazo: volta ao mesmo lugar.
+            var volta = new FakeClient(core, "Bia").Hello(bia.Token);
+            Assert.That(volta.Room?.inMatch, Is.True);
+            Assert.That(volta.MySeat, Is.EqualTo(biaSeat));
+            core.OnDisconnected(volta);
+
+            for (int i = 0; i < 25; i++) core.Tick(1f);
+            var tarde = new FakeClient(core, "Bia").Hello(bia.Token);
+            Assert.That(tarde.Room, Is.Null, "Depois do prazo fora, não volta mais para a sala.");
+            Assert.That(owner.Room.members.Exists(m => m.name == "Bia"), Is.False);
         }
 
         [Test]

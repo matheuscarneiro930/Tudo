@@ -64,7 +64,7 @@ namespace Fodinha.Game.UI
         public void Show(RoundSummary summary, MatchView view)
         {
             gameObject.SetActive(true);
-            title.text = "Fim da rodada " + summary.RoundNumber + "  ·  " + summary.Cards + (summary.Cards == 1 ? " carta" : " cartas");
+            title.text = "Resultado  ·  " + MatchScreen.CardsLabel(summary.Cards);
             note.text = summary.SimultaneousEliminationTiebreak ? "Todos zeraram! Quem tinha mais vidas volta com 1." : "";
 
             var results = summary.Results;
@@ -76,7 +76,6 @@ namespace Fodinha.Game.UI
             }
 
             float rowHeight = Mathf.Min(1f / Mathf.Max(count, 1), 0.11f);
-            int maxLives = view.Rules != null ? view.Rules.StartingLives : 3;
             for (int i = 0; i < rows.Count; i++)
             {
                 var texts = rows[i];
@@ -95,8 +94,8 @@ namespace Fodinha.Game.UI
                 if (r.Eliminated)
                     texts[3].text = UiKit.Colored("Eliminado", Palette.Bad);
                 else
-                    texts[3].text = UiKit.Hearts(r.LivesAfter, Mathf.Max(maxLives, r.LivesAfter)) +
-                                    (r.LivesLost > 0 ? " " + UiKit.Colored("-" + r.LivesLost, Palette.Bad) : "");
+                    texts[3].text = "<b>" + r.LivesAfter + "</b>" +
+                                    (r.LivesLost > 0 ? "  " + UiKit.Colored("(-" + r.LivesLost + ")", Palette.Bad) : "");
             }
         }
 

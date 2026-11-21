@@ -17,10 +17,12 @@ namespace Fodinha.Game.UI
         private Image panel;
         private Image outline;
         private Text nameText;
+        private Image heartIcon;
         private Text livesText;
         private Text betText;
         private CardView miniCard;
         private Text countText;
+        private Text betCaption;
         private Image dealerChip;
         private TimerBar timer;
 
@@ -61,18 +63,27 @@ namespace Fodinha.Game.UI
             nameText = UiKit.Label("Nome", rt, "", 34, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
             nameText.rectTransform.Anchor(0.06f, 0.68f, 0.72f, 0.97f);
 
-            livesText = UiKit.Label("Vidas", rt, "", 32, Palette.Heart, TextAnchor.MiddleLeft, FontStyle.Normal, true);
-            livesText.rectTransform.Anchor(0.06f, 0.40f, 0.72f, 0.68f);
+            // Vidas: coração desenhado + número (o símbolo ♥ da fonte não aparece no navegador).
+            heartIcon = UiKit.Image("Coracao", rt, Palette.Heart, SpriteFactory.Suit(Suit.Hearts));
+            heartIcon.preserveAspect = true;
+            heartIcon.raycastTarget = false;
+            heartIcon.rectTransform.Anchor(0.05f, 0.42f, 0.19f, 0.66f);
+            livesText = UiKit.Label("Vidas", rt, "", 34, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
+            livesText.rectTransform.Anchor(0.21f, 0.40f, 0.70f, 0.68f);
 
-            betText = UiKit.Label("Aposta", rt, "", 28, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Normal, true);
-            betText.rectTransform.Anchor(0.05f, 0.04f, 0.96f, 0.38f);
+            betText = UiKit.Label("Fez", rt, "", 28, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Normal, true);
+            betText.rectTransform.Anchor(0.05f, 0.04f, 0.70f, 0.38f);
 
-            miniCard = CardView.Create(rt, "CartasNaMao");
-            miniCard.Rect.Place(new Vector2(0.855f, 0.655f), new Vector2(50f, 72f));
+            // Carta à direita: mostra a APOSTA do jogador (na rodada cega, a carta dele).
+            miniCard = CardView.Create(rt, "Aposta");
+            miniCard.Rect.Place(new Vector2(0.855f, 0.62f), new Vector2(50f, 72f));
             miniCard.SetShadow(false);
             miniCard.SetInteractable(false);
 
-            countText = UiKit.Label("Quantidade", miniCard.Rect, "", 40, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold, true);
+            betCaption = UiKit.Label("Legenda", rt, "aposta", 22, Palette.TextMuted, TextAnchor.MiddleCenter, FontStyle.Normal, true);
+            betCaption.rectTransform.Anchor(0.70f, 0.02f, 1.0f, 0.24f);
+
+            countText = UiKit.Label("Numero", miniCard.Rect, "", 40, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold, true);
             countText.rectTransform.Fill();
             var countOutline = countText.gameObject.AddComponent<Outline>();
             countOutline.effectColor = new Color(0f, 0f, 0f, 0.8f);
@@ -97,7 +108,6 @@ namespace Fodinha.Game.UI
                 lastLives = p.Lives;
             }
             Seat = p.Seat;
-            int startingLives = view.Rules != null ? view.Rules.StartingLives : 3;
 
             string suffix = "";
             if (!p.IsConnected) suffix = " " + UiKit.Colored("(caiu)", Palette.TextMuted);
@@ -111,16 +121,18 @@ namespace Fodinha.Game.UI
 
             if (p.IsEliminated)
             {
-                livesText.text = UiKit.Hearts(0, startingLives);
+                livesText.text = "0";
                 betText.text = "Eliminado";
                 betText.color = Palette.TextMuted;
                 miniCard.gameObject.SetActive(false);
+                betCaption.gameObject.SetActive(false);
                 return;
             }
 
-            livesText.text = UiKit.Hearts(p.Lives, Mathf.Max(startingLives, p.Lives));
-            betText.text = BetLine(p);
+            livesText.text = p.Lives.ToString();
+            betText.text = WonLine(p);
             betText.color = Palette.Text;
+            betCaption.gameObject.SetActive(true);
 
             // Animações: aposta feita "pula"; vaza ganha também.
             if (p.HasBet && lastBet != p.Bet) Tweens.Scale(betText.rectTransform, new Vector3(1.35f, 1.35f, 1f), Vector3.one, 0.35f);
@@ -130,24 +142,32 @@ namespace Fodinha.Game.UI
             lastTricks = p.TricksWon;
             lastLives = p.Lives;
 
+            string bet = p.HasBet ? p.Bet.ToString() : "?";
+            miniCard.gameObject.SetActive(true);
             if (p.VisibleCards.Count > 0)
             {
-                // Rodada cega: o local enxerga a carta "na testa" deste adversário.
+                // Rodada cega: o local enxerga a carta "na testa" deste adversário; a aposta vai na legenda.
                 var card = p.VisibleCards[0];
-                miniCard.gameObject.SetActive(true);
                 miniCard.ShowFace(card, view.Comparer != null && view.Comparer.IsManilha(card));
                 countText.text = "";
-            }
-            else if (p.HandCount > 0)
-            {
-                miniCard.gameObject.SetActive(true);
-                miniCard.ShowBack();
-                countText.text = p.HandCount.ToString();
+                betCaption.text = "aposta " + bet;
             }
             else
             {
-                miniCard.gameObject.SetActive(false);
+                miniCard.ShowBack();
+                countText.text = bet;
+                betCaption.text = "aposta";
             }
+        }
+
+        /// <summary>Quantas rodadas o adversário já fez (verde se bateu a aposta, vermelho se passou).</summary>
+        public static string WonLine(PlayerView p)
+        {
+            if (!p.HasBet) return UiKit.Colored("apostando...", Palette.TextMuted);
+            string won = p.TricksWon == p.Bet ? UiKit.Colored(p.TricksWon.ToString(), Palette.Good)
+                       : p.TricksWon > p.Bet ? UiKit.Colored(p.TricksWon.ToString(), Palette.Bad)
+                       : p.TricksWon.ToString();
+            return "Fez <b>" + won + "</b>";
         }
 
         public void SetTimer(bool visible, float fraction)

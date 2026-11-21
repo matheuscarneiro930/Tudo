@@ -22,13 +22,14 @@ namespace Fodinha.Game.UI
         private RectTransform safeRoot;
         private Text roundTitle;
         private Text roundDetail;
-        private CardView viraCard;
+
         private Text manilhaText;
         private Button exitButton;
         private TableView table;
         private Image localPanel;
         private Image localOutline;
         private Text localName;
+        private Image localHeart;
         private Text localLives;
         private Text localBet;
         private Image localDealer;
@@ -206,18 +207,14 @@ namespace Fodinha.Game.UI
             exitButton = UiKit.Button("Sair", bar, "‹ Sair", () => MenuRequested?.Invoke(), Palette.ButtonSecondary, Palette.Text, 32);
             exitButton.GetComponent<RectTransform>().Anchor(0.02f, 0.18f, 0.17f, 0.82f);
 
-            roundTitle = UiKit.Label("Rodada", bar, "", 44, Palette.Text, TextAnchor.LowerLeft, FontStyle.Bold, true);
-            roundTitle.rectTransform.Anchor(0.2f, 0.45f, 0.62f, 0.95f);
+            // Topo: só quantas cartas tem a mão ("3 cartas"); a vira fica no meio da mesa.
+            roundTitle = UiKit.Label("Cartas", bar, "", 44, Palette.Text, TextAnchor.LowerLeft, FontStyle.Bold, true);
+            roundTitle.rectTransform.Anchor(0.2f, 0.45f, 0.66f, 0.95f);
             roundDetail = UiKit.Label("Detalhe", bar, "", 30, Palette.TextMuted, TextAnchor.UpperLeft, FontStyle.Normal, true);
-            roundDetail.rectTransform.Anchor(0.2f, 0.05f, 0.62f, 0.45f);
+            roundDetail.rectTransform.Anchor(0.2f, 0.05f, 0.66f, 0.45f);
 
-            manilhaText = UiKit.Label("Manilha", bar, "", 32, Palette.Accent, TextAnchor.MiddleRight, FontStyle.Bold, true);
-            manilhaText.rectTransform.Anchor(0.6f, 0.1f, 0.88f, 0.9f);
-
-            viraCard = CardView.Create(bar, "Vira");
-            viraCard.Rect.Anchor(0.9f, 0.06f, 0.98f, 0.94f);
-            viraCard.SetInteractable(false);
-            viraCard.SetShadow(false);
+            manilhaText = UiKit.Label("Manilha", bar, "", 34, Palette.Accent, TextAnchor.MiddleRight, FontStyle.Bold, true);
+            manilhaText.rectTransform.Anchor(0.64f, 0.1f, 0.97f, 0.9f);
         }
 
         private void BuildLocalStrip(RectTransform strip)
@@ -235,11 +232,15 @@ namespace Fodinha.Game.UI
             d.rectTransform.Fill();
 
             localName = UiKit.Label("Nome", strip, "", 38, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
-            localName.rectTransform.Anchor(0.08f, 0.2f, 0.4f, 0.95f);
-            localLives = UiKit.Label("Vidas", strip, "", 40, Palette.Heart, TextAnchor.MiddleCenter, FontStyle.Normal, true);
-            localLives.rectTransform.Anchor(0.4f, 0.2f, 0.62f, 0.95f);
+            localName.rectTransform.Anchor(0.08f, 0.2f, 0.38f, 0.95f);
+            localHeart = UiKit.Image("Coracao", strip, Palette.Heart, SpriteFactory.Suit(Suit.Hearts));
+            localHeart.preserveAspect = true;
+            localHeart.raycastTarget = false;
+            localHeart.rectTransform.Anchor(0.39f, 0.28f, 0.45f, 0.88f);
+            localLives = UiKit.Label("Vidas", strip, "", 40, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold, true);
+            localLives.rectTransform.Anchor(0.46f, 0.2f, 0.58f, 0.95f);
             localBet = UiKit.Label("Aposta", strip, "", 36, Palette.Text, TextAnchor.MiddleRight, FontStyle.Normal, true);
-            localBet.rectTransform.Anchor(0.62f, 0.2f, 0.97f, 0.95f);
+            localBet.rectTransform.Anchor(0.58f, 0.2f, 0.97f, 0.95f);
 
             localTimer = TimerBar.Create(strip);
             localTimer.GetComponent<RectTransform>().Anchor(0.02f, 0.04f, 0.98f, 0.16f);
@@ -273,27 +274,19 @@ namespace Fodinha.Game.UI
         private void RenderTopBar()
         {
             exitButton.gameObject.SetActive(MenuRequested != null);
-            roundTitle.text = view.RoundNumber > 0 ? "Rodada " + view.RoundNumber : "Fodinha";
-            string cards = view.CardsThisRound + (view.CardsThisRound == 1 ? " carta" : " cartas");
-            string detail = cards + "  ·  " + view.ActivePlayerCount + " na mesa";
+            roundTitle.text = view.CardsThisRound > 0 ? CardsLabel(view.CardsThisRound) : "Fodinha";
+            string detail = view.ActivePlayerCount + " na mesa";
             if (view.IsBlindRound) detail += "  ·  " + UiKit.Colored("CEGA", Palette.Accent);
+            if (view.Phase == MatchPhase.Playing || view.Phase == MatchPhase.TrickComplete)
+                detail += "  ·  rodada " + view.TrickNumber + " de " + view.CardsThisRound;
             roundDetail.text = detail;
 
-            if (view.Vira.HasValue)
-            {
-                viraCard.gameObject.SetActive(true);
-                viraCard.ShowFace(view.Vira.Value, false);
-                var manilha = CardComparer.ManilhaFromVira(view.Vira.Value);
-                manilhaText.text = "Vira  ·  Manilha: " + manilha.Symbol();
-            }
-            else
-            {
-                viraCard.gameObject.SetActive(false);
-                manilhaText.text = view.Rules != null && view.Rules.ManilhaMode == ManilhaMode.Fixed
-                    ? "Manilhas: 4♣ 7♥ A♠ 7♦"
-                    : "";
-            }
+            manilhaText.text = view.Vira.HasValue
+                ? "Manilha: " + CardComparer.ManilhaFromVira(view.Vira.Value).Symbol()
+                : "";
         }
+
+        public static string CardsLabel(int cards) => cards + (cards == 1 ? " carta" : " cartas");
 
         private void RenderLocalStrip()
         {
@@ -308,9 +301,9 @@ namespace Fodinha.Game.UI
                 return;
             }
 
-            int startingLives = view.Rules != null ? view.Rules.StartingLives : 3;
             localName.text = me.Name + (me.IsAutoPlay ? " " + UiKit.Colored("(auto)", Palette.TextMuted) : "");
-            localLives.text = me.IsEliminated ? UiKit.Colored("Eliminado", Palette.Bad) : UiKit.Hearts(me.Lives, Mathf.Max(startingLives, me.Lives));
+            localHeart.gameObject.SetActive(!me.IsEliminated);
+            localLives.text = me.IsEliminated ? UiKit.Colored("Eliminado", Palette.Bad) : me.Lives.ToString();
             localBet.text = me.IsEliminated ? "" : SeatView.BetLine(me);
             localDealer.gameObject.SetActive(view.DealerSeat == me.Seat && !me.IsEliminated);
             bool myTurn = view.IsMyTurn && (view.Phase == MatchPhase.Betting || view.Phase == MatchPhase.Playing);
@@ -345,7 +338,7 @@ namespace Fodinha.Game.UI
             {
                 case MatchPhase.Betting:
                     if (view.IsBlindRound)
-                        return "Rodada cega: você vê a carta dos outros, não a sua.\n" + UiKit.Colored(current + " está apostando...", Palette.TextMuted);
+                        return "Mão cega: você vê a carta dos outros, não a sua.\n" + UiKit.Colored(current + " está apostando...", Palette.TextMuted);
                     return current + " está apostando...";
                 case MatchPhase.Playing:
                     if (view.IsMyTurn)
@@ -354,7 +347,7 @@ namespace Fodinha.Game.UI
                 case MatchPhase.TrickComplete:
                     return "";
                 case MatchPhase.RoundComplete:
-                    return "Fim da rodada";
+                    return "Resultado";
             }
             return "";
         }

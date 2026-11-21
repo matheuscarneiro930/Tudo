@@ -104,7 +104,7 @@ namespace Fodinha.Game.UI
             bool iWon = view.WinnerSeat >= 0 && view.WinnerSeat == view.ViewerSeat;
             string winnerName = view.WinnerSeat >= 0 ? view.Players[view.WinnerSeat].Name : "?";
             title.text = iWon ? "Você venceu!" : winnerName + " venceu!";
-            subtitle.text = "Partida de " + view.Players.Count + " jogadores · " + view.RoundNumber + " rodadas";
+            subtitle.text = "Partida de " + view.Players.Count + " jogadores";
 
             var ranking = MatchRanking.Build(view);
             while (rows.Count < ranking.Count)
@@ -126,7 +126,7 @@ namespace Fodinha.Game.UI
                 string name = me ? UiKit.Colored(e.Player.Name, Palette.Accent) : e.Player.Name;
                 string detail = e.Player.Seat == view.WinnerSeat
                     ? UiKit.Colored("  vencedor", Palette.Good)
-                    : e.Player.IsEliminated ? UiKit.Colored("  caiu na rodada " + e.Player.EliminatedAtRound, Palette.TextMuted) : "";
+                    : e.Player.IsEliminated ? UiKit.Colored("  eliminado", Palette.TextMuted) : "";
                 t.text = "<b>" + e.Place + "º</b>  " + name + detail;
             }
         }

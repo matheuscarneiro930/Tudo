@@ -60,7 +60,7 @@ namespace Fodinha.Game.UI
 
             bool isLast = betsMade == view.ActivePlayerCount - 1;
             int forbidden = cards - sum;
-            string text = "Quantas vazas você vai fazer?  " + UiKit.Colored("Apostas na mesa: " + sum + " de " + cards, Palette.TextMuted);
+            string text = "Quantas rodadas você vai fazer?  " + UiKit.Colored("Apostas na mesa: " + sum + " de " + cards, Palette.TextMuted);
             if (isLast && view.Rules != null && view.Rules.LastBidderRestriction && forbidden >= 0 && forbidden <= cards)
                 text += "\n" + UiKit.Colored("Você é o pé: não pode apostar " + forbidden, Palette.Accent);
             prompt.text = text;

@@ -271,7 +271,7 @@ namespace Fodinha.Online.Tests
         public void ResumoDasRegras()
         {
             var text = LobbyScreen.RulesSummary(RuleSet.CreateDefault());
-            Assert.That(text, Does.Contain("3 vidas").And.Contain("30 s").And.Contain("rodada cega"));
+            Assert.That(text, Does.Contain("3 vidas").And.Contain("30 s para apostar").And.Contain("mão cega"));
         }
     }
 }

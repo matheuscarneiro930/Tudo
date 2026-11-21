@@ -260,11 +260,11 @@ namespace Fodinha.Online
             var parts = new List<string>
             {
                 r.StartingLives + " vidas",
-                r.TurnTimeSeconds + " s por jogada",
-                r.MaxCardsPerPlayer > 0 ? "até " + r.MaxCardsPerPlayer + " cartas" : "cartas sem limite"
+                r.BetTimeSeconds + " s para apostar",
+                r.TurnTimeSeconds + " s para jogar a carta"
             };
             return string.Join(" · ", parts) +
-                   "\nRegras oficiais: manilha pela vira · naipe desempata · pé não fecha a soma · errou perde 1 vida · 1ª rodada cega";
+                   "\nRegras oficiais: manilha pela vira · naipe desempata · pé não fecha a soma · errou perde 1 vida · 1ª mão cega";
         }
     }
 }

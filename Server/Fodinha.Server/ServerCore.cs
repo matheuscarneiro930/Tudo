@@ -16,8 +16,11 @@ namespace Fodinha.Server
 
     public sealed class ServerOptions
     {
-        /// <summary>Tempo para um jogador desconectado no lobby voltar antes de perder o lugar.</summary>
-        public float LobbyDisconnectGraceSeconds = 60f;
+        /// <summary>Tempo para um jogador desconectado no lobby voltar antes de perder o lugar (5 min).</summary>
+        public float LobbyDisconnectGraceSeconds = 300f;
+
+        /// <summary>Tempo para quem caiu no meio da partida voltar (o bot joga por ele). Depois disso, perde o lugar.</summary>
+        public float MatchReconnectSeconds = 300f;
 
         /// <summary>Partida sem nenhum humano conectado por este tempo é encerrada.</summary>
         public float AbandonedMatchSeconds = 300f;
@@ -146,6 +149,14 @@ namespace Fodinha.Server
                         else if (now - room.AbandonedSince > options.AbandonedMatchSeconds) DeleteRoom(room, "abandonada");
                     }
                     else room.AbandonedSince = -1;
+
+                    // Quem caiu e não voltou em 5 minutos perde o lugar (eliminado ao fim da mão).
+                    foreach (var m in room.Members.ToList())
+                    {
+                        if (m.IsBot || m.Left || m.Player.Link != null || m.Player.Room != room) continue;
+                        if (now - m.Player.DisconnectedAt > options.MatchReconnectSeconds) RemoveFromRoom(m.Player, room, notify: false);
+                        if (!rooms.ContainsKey(room.Code)) break;
+                    }
                     continue;
                 }
 

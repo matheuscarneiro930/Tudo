@@ -34,6 +34,80 @@ namespace Fodinha.Game.UI
 
         public static Sprite SoftGlow => softGlow != null ? softGlow : (softGlow = BuildGlow(128));
 
+        private static readonly Sprite[] suits = new Sprite[4];
+
+        /// <summary>
+        /// Naipe desenhado (branco, para tingir de vermelho/preto). Não depende de fonte: os símbolos ♥♦♠♣
+        /// não existem na fonte do navegador/celular e apareciam em branco.
+        /// </summary>
+        public static Sprite Suit(Core.Suit suit)
+        {
+            int i = (int)suit;
+            if (suits[i] == null) suits[i] = BuildSuit(suit, 128);
+            return suits[i];
+        }
+
+        /// <summary>Verdadeiro se o ponto (x, y em -0.5..0.5, y para cima) está dentro do naipe.</summary>
+        public static bool InsideSuit(Core.Suit suit, float x, float y)
+        {
+            switch (suit)
+            {
+                case Core.Suit.Diamonds:
+                    return Mathf.Abs(x) / 0.36f + Mathf.Abs(y) / 0.48f <= 1f;
+                case Core.Suit.Hearts:
+                    return InCircle(x, y, -0.2f, 0.17f, 0.23f) || InCircle(x, y, 0.2f, 0.17f, 0.23f) ||
+                           InTriangle(x, y, -0.425f, 0.12f, 0.425f, 0.12f, 0f, -0.45f);
+                case Core.Suit.Spades:
+                    return InCircle(x, y, -0.2f, -0.06f, 0.21f) || InCircle(x, y, 0.2f, -0.06f, 0.21f) ||
+                           InTriangle(x, y, -0.405f, -0.1f, 0.405f, -0.1f, 0f, 0.46f) ||
+                           InTriangle(x, y, 0f, -0.05f, -0.15f, -0.46f, 0.15f, -0.46f);
+                case Core.Suit.Clubs:
+                    return InCircle(x, y, 0f, 0.22f, 0.19f) || InCircle(x, y, -0.22f, -0.08f, 0.19f) ||
+                           InCircle(x, y, 0.22f, -0.08f, 0.19f) || InCircle(x, y, 0f, 0.02f, 0.12f) ||
+                           InTriangle(x, y, 0f, 0.0f, -0.15f, -0.46f, 0.15f, -0.46f);
+                default:
+                    return false;
+            }
+        }
+
+        private static bool InCircle(float x, float y, float cx, float cy, float r)
+        {
+            float dx = x - cx, dy = y - cy;
+            return dx * dx + dy * dy <= r * r;
+        }
+
+        private static bool InTriangle(float px, float py, float ax, float ay, float bx, float by, float cx, float cy)
+        {
+            float d1 = (px - bx) * (ay - by) - (ax - bx) * (py - by);
+            float d2 = (px - cx) * (by - cy) - (bx - cx) * (py - cy);
+            float d3 = (px - ax) * (cy - ay) - (cx - ax) * (py - ay);
+            bool neg = d1 < 0 || d2 < 0 || d3 < 0;
+            bool pos = d1 > 0 || d2 > 0 || d3 > 0;
+            return !(neg && pos);
+        }
+
+        private static Sprite BuildSuit(Core.Suit suit, int size)
+        {
+            var tex = NewTexture(size, size);
+            var pixels = new Color32[size * size];
+            const int samples = 4; // 4x4 amostras por pixel = bordas suaves
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                int hits = 0;
+                for (int sy = 0; sy < samples; sy++)
+                for (int sx = 0; sx < samples; sx++)
+                {
+                    float u = (x + (sx + 0.5f) / samples) / size - 0.5f;
+                    float v = (y + (sy + 0.5f) / samples) / size - 0.5f;
+                    if (InsideSuit(suit, u, v)) hits++;
+                }
+                pixels[y * size + x] = new Color32(255, 255, 255, (byte)(255 * hits / (samples * samples)));
+            }
+            tex.SetPixels32(pixels);
+            return Finish(tex, Vector4.zero);
+        }
+
         private static Texture2D NewTexture(int w, int h)
         {
             var tex = new Texture2D(w, h, TextureFormat.RGBA32, false)

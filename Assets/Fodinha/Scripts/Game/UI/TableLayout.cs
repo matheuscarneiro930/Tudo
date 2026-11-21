@@ -14,7 +14,7 @@ namespace Fodinha.Game.UI
         public const float SeatRadiusY = 0.40f;
 
         /// <summary>Fração do caminho centro → assento onde ficam as cartas jogadas na vaza.</summary>
-        public const float TrickDistance = 0.5f;
+        public const float TrickDistance = 0.55f; // deixa o meio livre para a vira sem encostar nos assentos
 
         private const float StartAngle = 225f;   // baixo-esquerda
         private const float SweepAngle = 270f;   // até baixo-direita, passando pelo topo

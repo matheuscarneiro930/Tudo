@@ -13,14 +13,11 @@ namespace Fodinha.Game.UI
         public enum Mode { Offline, Room }
 
         private static readonly int[] TurnTimes = { 20, 25, 30, 35, 40, 45, 50, 55, 60 };
-        private static readonly int[] CardCaps = { 0, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
         private Mode mode;
         private OptionStepper players;
         private OptionStepper visibility;
-        private OptionStepper lives;
         private OptionStepper turnTime;
-        private OptionStepper cardCap;
         private OptionStepper timeouts;
 
         public Mode EditorMode => mode;
@@ -46,26 +43,26 @@ namespace Fodinha.Game.UI
                 players = OptionStepper.Create(content, "Máx. jogadores", Range(RuleSet.MinPlayers, RuleSet.MaxPlayers, ""), 6);
             }
 
-            lives = OptionStepper.Create(content, "Vidas", Range(RuleSet.MinLives, RuleSet.MaxLives, ""), 1);
-            turnTime = OptionStepper.Create(content, "Tempo de jogada", Map(TurnTimes, v => v + " s"), 2);
-            cardCap = OptionStepper.Create(content, "Máx. de cartas", Map(CardCaps, v => v == 0 ? "Sem limite" : v.ToString()), 0);
+            turnTime = OptionStepper.Create(content, "Tempo para jogar a carta", Map(TurnTimes, v => v + " s"), 2);
             timeouts = OptionStepper.Create(content, "Tempo esgotado: bot assume após",
                                             new[] { "1 vez", "2 vezes", "3 vezes", "4 vezes", "5 vezes" }, 1);
 
             // As demais regras são fixas (regras oficiais): só informa.
             var info = UiKit.Label("RegrasOficiais", content, OfficialRulesText, 30, Palette.TextMuted, TextAnchor.UpperLeft);
-            UiControls.SetHeight(info, 300f);
+            UiControls.SetHeight(info, 420f);
         }
 
         /// <summary>Texto com as regras fixas do jogo.</summary>
         public const string OfficialRulesText =
             "<b>Regras oficiais (sempre valem):</b>\n" +
+            "• 3 vidas para cada jogador\n" +
+            "• 30 segundos para apostar\n" +
             "• Manilha pela vira (o valor seguinte à carta virada)\n" +
-            "• Empate: o naipe desempata (♣ > ♥ > ♠ > ♦)\n" +
+            "• Empate: o naipe desempata (Paus > Copas > Espadas > Ouros)\n" +
             "• O pé não pode apostar o número que fecha a soma\n" +
             "• Errou a aposta: perde 1 vida\n" +
-            "• Cada rodada tem 1 carta a mais, até o baralho permitir\n" +
-            "• A 1ª rodada (1 carta) é cega";
+            "• A cada mão, 1 carta a mais, até o baralho permitir\n" +
+            "• A 1ª mão (1 carta) é cega";
 
         // ------------------------------------------------------------------ leitura/escrita
 
@@ -79,9 +76,7 @@ namespace Fodinha.Game.UI
                 visibility.SetIndex(isPublic ? 1 : 0);
             }
 
-            lives.SetIndex(rules.StartingLives - RuleSet.MinLives);
             turnTime.SetIndex(IndexOf(TurnTimes, rules.TurnTimeSeconds, 2));
-            cardCap.SetIndex(IndexOf(CardCaps, rules.MaxCardsPerPlayer, 0));
             timeouts.SetIndex(rules.TimeoutsBeforeAutoPlay - 1);
         }
 
@@ -90,9 +85,7 @@ namespace Fodinha.Game.UI
         {
             return new RuleSet
             {
-                StartingLives = RuleSet.MinLives + lives.Index,
                 TurnTimeSeconds = TurnTimes[turnTime.Index],
-                MaxCardsPerPlayer = CardCaps[cardCap.Index],
                 TimeoutsBeforeAutoPlay = 1 + timeouts.Index
             }.WithOfficialRules();
         }

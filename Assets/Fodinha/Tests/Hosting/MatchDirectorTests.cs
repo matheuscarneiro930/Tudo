@@ -54,7 +54,7 @@ namespace Fodinha.Hosting.Tests
         public void TempoEsgotado_ContaTimeout_EAgePeloJogador()
         {
             var rules = RuleSet.CreateDefault();
-            rules.TurnTimeSeconds = 20;
+            rules.BetTimeSeconds = 20; // o primeiro a agir está apostando
             var d = Create(2, 1, PacingSettings.Instant, 3, rules);
             d.Start(firstDealerSeat: 1); // assento 0 aposta primeiro
             Assert.That(d.Engine.CurrentSeat, Is.EqualTo(0));
@@ -74,7 +74,7 @@ namespace Fodinha.Hosting.Tests
             var pacing = PacingSettings.Instant;
             pacing.DealSeconds = 2f;
             var rules = RuleSet.CreateDefault();
-            rules.TurnTimeSeconds = 20;
+            rules.BetTimeSeconds = 20; // o primeiro a agir está apostando
             var d = Create(2, 1, pacing, 5, rules);
             d.Start(firstDealerSeat: 1);
 
@@ -84,6 +84,26 @@ namespace Fodinha.Hosting.Tests
             Assert.That(d.TurnTimeRemaining, Is.EqualTo(20f).Within(0.001f));
             d.Tick(5f);
             Assert.That(d.TurnTimeRemaining, Is.EqualTo(15f).Within(0.001f));
+        }
+
+        [Test]
+        public void ApostaUsaTempoDeAposta_JogadaUsaTempoDeJogada()
+        {
+            var rules = RuleSet.CreateDefault();
+            rules.BetTimeSeconds = 30;
+            rules.TurnTimeSeconds = 50;
+            rules.BlindOneCardRounds = false; // a 1ª rodada não é cega, para o humano jogar a carta
+            var d = Create(2, 1, PacingSettings.Instant, 21, rules);
+            d.Start(firstDealerSeat: 1);
+            d.Tick(0f);
+            Assert.That(d.TurnTimeTotal, Is.EqualTo(30f));
+            Assert.That(d.TurnTimeRemaining, Is.EqualTo(30f).Within(0.01f));
+
+            d.SubmitBet(0, d.Engine.GetAllowedBets(0)[0]);
+            RunUntil(d, () => d.Engine.Phase == MatchPhase.Playing && d.Engine.CurrentSeat == 0, 0.01f, 10000);
+            d.Tick(0f);
+            Assert.That(d.TurnTimeTotal, Is.EqualTo(50f));
+            Assert.That(d.TurnTimeRemaining, Is.EqualTo(50f).Within(0.01f));
         }
 
         [Test]

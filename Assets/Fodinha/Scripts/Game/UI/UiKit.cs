@@ -155,16 +155,6 @@ namespace Fodinha.Game.UI
 
         public static Text ButtonLabel(Button button) => button.GetComponentInChildren<Text>(true);
 
-        /// <summary>Corações de vida em texto rico: cheios em vermelho, perdidos apagados.</summary>
-        public static string Hearts(int lives, int maxLives)
-        {
-            if (lives < 0) lives = 0;
-            int lost = Mathf.Max(0, maxLives - lives);
-            var full = new string('♥', lives);
-            var empty = new string('♥', lost);
-            return (lives > 0 ? "<color=#" + Palette.ToHex(Palette.Heart) + ">" + full + "</color>" : "") +
-                   (lost > 0 ? "<color=#FFFFFF33>" + empty + "</color>" : "");
-        }
 
         public static string Colored(string text, Color color) => "<color=#" + Palette.ToHex(color) + ">" + text + "</color>";
 

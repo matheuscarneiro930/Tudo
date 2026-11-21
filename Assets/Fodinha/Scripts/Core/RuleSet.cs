@@ -66,8 +66,11 @@ namespace Fodinha.Core
         /// <summary>Vidas iniciais de cada jogador (2 a 5).</summary>
         public int StartingLives = 3;
 
-        /// <summary>Tempo de cada jogada/aposta em segundos (20 a 60). Controlado pela camada de rede.</summary>
+        /// <summary>Tempo para jogar uma carta, em segundos (20 a 60). Controlado pelo host (MatchDirector).</summary>
         public int TurnTimeSeconds = 30;
+
+        /// <summary>Tempo para apostar, em segundos (20 a 60). Regra oficial: 30.</summary>
+        public int BetTimeSeconds = 30;
 
         public ManilhaMode ManilhaMode = ManilhaMode.Vira;
 
@@ -102,7 +105,7 @@ namespace Fodinha.Core
 
         /// <summary>
         /// Regras oficiais do Fodinha Online (definidas pelo dono do jogo). O jogo (offline e servidor) usa SEMPRE
-        /// esta versão; só vidas, tempo de jogada, teto de cartas e tempos esgotados continuam configuráveis.
+        /// esta versão; só o tempo para jogar a carta e os tempos esgotados até o bot continuam configuráveis.
         /// As outras variações seguem no motor apenas para testes e futuros modos de jogo.
         /// </summary>
         public RuleSet WithOfficialRules()
@@ -114,13 +117,20 @@ namespace Fodinha.Core
             r.LifeLossMode = LifeLossMode.OnePerMiss;       // errou: perde 1 vida
             r.Progression = CardProgression.UpThenHold;     // +1 carta por rodada até o máximo, e mantém
             r.BlindOneCardRounds = true;                    // a rodada de 1 carta é cega
+            r.StartingLives = OfficialLives;                // sempre 3 vidas
+            r.MaxCardsPerPlayer = 0;                        // sem teto: o baralho é o limite
+            r.BetTimeSeconds = OfficialBetSeconds;          // 30 s para apostar
             return r;
         }
 
         /// <summary>Verdadeiro se as regras fixas são as oficiais.</summary>
         public bool FollowsOfficialRules =>
             ManilhaMode == ManilhaMode.Vira && TieRule == TieRule.SuitBreaksTie && LastBidderRestriction &&
-            LifeLossMode == LifeLossMode.OnePerMiss && Progression == CardProgression.UpThenHold && BlindOneCardRounds;
+            LifeLossMode == LifeLossMode.OnePerMiss && Progression == CardProgression.UpThenHold && BlindOneCardRounds &&
+            StartingLives == OfficialLives && MaxCardsPerPlayer == 0 && BetTimeSeconds == OfficialBetSeconds;
+
+        public const int OfficialLives = 3;
+        public const int OfficialBetSeconds = 30;
 
         /// <summary>Lista de problemas da configuração. Vazia = configuração válida.</summary>
         public List<string> GetValidationErrors()
@@ -130,6 +140,8 @@ namespace Fodinha.Core
                 errors.Add("Vidas iniciais devem estar entre " + MinLives + " e " + MaxLives + ".");
             if (TurnTimeSeconds < MinTurnSeconds || TurnTimeSeconds > MaxTurnSeconds)
                 errors.Add("Tempo de jogada deve estar entre " + MinTurnSeconds + " e " + MaxTurnSeconds + " segundos.");
+            if (BetTimeSeconds < MinTurnSeconds || BetTimeSeconds > MaxTurnSeconds)
+                errors.Add("Tempo de aposta deve estar entre " + MinTurnSeconds + " e " + MaxTurnSeconds + " segundos.");
             if (!Enum.IsDefined(typeof(ManilhaMode), ManilhaMode)) errors.Add("Modo de manilha inválido.");
             if (!Enum.IsDefined(typeof(TieRule), TieRule)) errors.Add("Regra de empate inválida.");
             if (!Enum.IsDefined(typeof(LifeLossMode), LifeLossMode)) errors.Add("Modo de perda de vida inválido.");

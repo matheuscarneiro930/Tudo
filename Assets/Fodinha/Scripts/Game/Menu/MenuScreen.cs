@@ -19,7 +19,7 @@ namespace Fodinha.Game.Menu
         private readonly Dictionary<Page, GameObject> pages = new Dictionary<Page, GameObject>();
         private bool built;
         private RectTransform safeRoot;
-        private Text greeting;
+        private InputField homeName;
         private RulesEditor offlineRules;
         private RulesEditor roomRules;
         private InputField codeField;
@@ -48,6 +48,7 @@ namespace Fodinha.Game.Menu
         public InputField CodeField => codeField;
         public Button JoinButton => joinButton;
         public InputField NameField => nameField;
+        public InputField HomeNameField => homeName;
         public string LastToast { get; private set; } = "";
         public int ListedRooms { get; private set; }
 
@@ -72,7 +73,7 @@ namespace Fodinha.Game.Menu
             switch (page)
             {
                 case Page.Home:
-                    greeting.text = "Olá, " + UiKit.Colored(GamePrefs.PlayerName, Palette.Accent) + "!";
+                    homeName.text = GamePrefs.HasCustomName ? GamePrefs.PlayerName : "";
                     break;
                 case Page.Offline:
                     offlineRules.Load(GamePrefs.OfflineRules, GamePrefs.OfflineBots);
@@ -189,8 +190,16 @@ namespace Fodinha.Game.Menu
             var sub = UiKit.Label("Sub", page, "O N L I N E", 48, Palette.Text, TextAnchor.MiddleCenter, FontStyle.Bold, true);
             sub.rectTransform.Anchor(0.1f, 0.565f, 0.9f, 0.605f);
 
-            greeting = UiKit.Label("Saudacao", page, "", 40, Palette.TextMuted, TextAnchor.MiddleCenter, FontStyle.Normal, true);
-            greeting.rectTransform.Anchor(0.1f, 0.51f, 0.9f, 0.55f);
+            // Nome do jogador direto na tela inicial (aparece na mesa e nas salas).
+            homeName = UiControls.TextField("Nome", page, "Digite seu nome", 40, GamePrefs.MaxNameLength);
+            homeName.textComponent.alignment = TextAnchor.MiddleCenter;
+            ((Text)homeName.placeholder).alignment = TextAnchor.MiddleCenter;
+            homeName.onEndEdit.AddListener(value =>
+            {
+                GamePrefs.PlayerName = value;
+                homeName.text = GamePrefs.HasCustomName ? GamePrefs.PlayerName : "";
+            });
+            homeName.GetComponent<RectTransform>().Anchor(0.2f, 0.503f, 0.8f, 0.557f);
 
             AddHomeButton(page, "Jogar offline", 0, true, () => ShowPage(Page.Offline));
             AddHomeButton(page, "Criar sala", 1, false, () => ShowPage(Page.CreateRoom));
@@ -305,14 +314,14 @@ namespace Fodinha.Game.Menu
         }
 
         private const string HowToPlayText =
-            "<b><color=#FFC83D>Objetivo</color></b>\nSer o último jogador com vidas.\n\n" +
-            "<b><color=#FFC83D>Rodadas</color></b>\nA 1ª rodada tem 1 carta e é cega; cada rodada seguinte tem uma carta a mais, até o máximo que o baralho permite (depois mantém).\n\n" +
-            "<b><color=#FFC83D>Apostas</color></b>\nDepois de ver as cartas, cada um diz quantas vazas vai fazer. O último a apostar (o pé) não pode deixar a soma das apostas igual ao número de cartas.\n\n" +
-            "<b><color=#FFC83D>Vazas</color></b>\nCada um joga uma carta; a mais forte leva. Força: 4 5 6 7 Q J K A 2 3. Se duas cartas tiverem o mesmo valor, o naipe desempata: ♣ > ♥ > ♠ > ♦.\n\n" +
-            "<b><color=#FFC83D>Manilha</color></b>\nA carta virada (vira) define a manilha: o valor seguinte. Manilha vence qualquer carta; entre manilhas vale o naipe: ♣ > ♥ > ♠ > ♦.\n\n" +
+            "<b><color=#FFC83D>Objetivo</color></b>\nSer o último jogador com vidas. Cada um começa com 3 vidas.\n\n" +
+            "<b><color=#FFC83D>Cartas</color></b>\nA 1ª mão tem 1 carta e é cega; a cada mão, 1 carta a mais, até o máximo que o baralho permite (depois mantém).\n\n" +
+            "<b><color=#FFC83D>Apostas</color></b>\nDepois de ver as cartas, cada um tem 30 segundos para dizer quantas rodadas vai fazer. O último a apostar (o pé) não pode dizer o número que deixa a soma igual ao número de cartas.\n\n" +
+            "<b><color=#FFC83D>Rodadas</color></b>\nCada um joga uma carta; a mais forte leva a rodada. Força: 4 5 6 7 Q J K A 2 3. Se duas cartas tiverem o mesmo valor, o naipe desempata: Paus > Copas > Espadas > Ouros.\n\n" +
+            "<b><color=#FFC83D>Manilha</color></b>\nA carta do meio da mesa (vira) define a manilha: o valor seguinte. Manilha vence qualquer carta; entre manilhas vale o naipe.\n\n" +
             "<b><color=#FFC83D>Vidas</color></b>\nQuem faz exatamente o que apostou não perde nada. Quem erra perde 1 vida. Sem vidas, está fora.\n\n" +
-            "<b><color=#FFC83D>Rodada cega</color></b>\nNa rodada de 1 carta você vê a carta dos outros, mas não a sua!\n\n" +
-            "<b><color=#FFC83D>Tempo</color></b>\nSe o tempo acabar, o bot joga por você. Toque em \"Voltar a jogar\" para retomar.";
+            "<b><color=#FFC83D>Mão cega</color></b>\nNa mão de 1 carta você vê a carta dos outros, mas não a sua!\n\n" +
+            "<b><color=#FFC83D>Tempo e conexão</color></b>\nSe o tempo acabar, o bot joga por você. Se a internet cair, você tem 5 minutos para voltar; enquanto isso o bot joga no seu lugar.";
 
         // ------------------------------------------------------------------ ações
 

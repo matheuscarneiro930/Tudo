@@ -17,6 +17,8 @@ namespace Fodinha.Game.UI
         private Image bannerBg;
         private Text banner;
         private Text centerInfo;
+        private CardView viraCard;
+        private Text viraLabel;
         private readonly List<SeatView> seats = new List<SeatView>();
         private readonly List<CardView> trickCards = new List<CardView>();
         private readonly Dictionary<int, Vector2> directionBySeat = new Dictionary<int, Vector2>();
@@ -48,8 +50,16 @@ namespace Fodinha.Game.UI
 
             centerInfo = UiKit.Label("InfoCentro", rt, "", 30, new Color(1f, 1f, 1f, 0.35f), TextAnchor.MiddleCenter, FontStyle.Bold, true);
             centerInfo.rectTransform.Anchor(0.3f, 0.44f, 0.7f, 0.56f);
+            centerInfo.gameObject.SetActive(false); // a informação da rodada fica no topo
 
-            trickLayer = UiKit.Rect("Vaza", rt).Fill();
+            // Vira no meio da mesa, com a etiqueta "VIRA".
+            viraCard = CardView.Create(rt, "Vira");
+            viraCard.SetInteractable(false);
+            viraLabel = UiKit.Label("Etiqueta", viraCard.Rect, "VIRA", 30, Palette.Accent, TextAnchor.MiddleCenter, FontStyle.Bold, true);
+            viraLabel.rectTransform.Anchor(-0.3f, -0.34f, 1.3f, -0.06f);
+            viraCard.gameObject.SetActive(false);
+
+            trickLayer = UiKit.Rect("Rodada", rt).Fill();
             seatsLayer = UiKit.Rect("Adversarios", rt).Fill();
 
             bannerBg = UiKit.Image("Aviso", rt, new Color(0f, 0f, 0f, 0.72f), SpriteFactory.RoundedRect, 1.2f);
@@ -196,11 +206,11 @@ namespace Fodinha.Game.UI
                 if (result.HasWinner)
                 {
                     string who = result.WinnerSeat == local ? "Você" : view.Players[result.WinnerSeat].Name;
-                    message = who + (result.WinnerSeat == local ? " levou a vaza!" : " levou a vaza");
+                    message = who + (result.WinnerSeat == local ? " levou a rodada!" : " levou a rodada");
                 }
                 else
                 {
-                    message = "Empate! Ninguém levou";
+                    message = "Empate! Ninguém levou a rodada";
                 }
             }
             bannerBg.gameObject.SetActive(message != null);
@@ -210,11 +220,18 @@ namespace Fodinha.Game.UI
                 bannerBg.rectTransform.anchoredPosition = new Vector2(0f, -cardH * 0.95f);
             }
 
-            bool showInfo = plays.Count == 0 && (view.Phase == MatchPhase.Betting || view.Phase == MatchPhase.Playing);
-            centerInfo.gameObject.SetActive(showInfo);
-            if (showInfo)
-                centerInfo.text = view.Phase == MatchPhase.Betting ? "APOSTAS" : "VAZA " + view.TrickNumber + " DE " + view.CardsThisRound;
+            // Vira no meio da mesa (abaixo das cartas jogadas).
+            bool showVira = view.Vira.HasValue && view.Phase != MatchPhase.MatchOver && view.Phase != MatchPhase.NotStarted;
+            viraCard.gameObject.SetActive(showVira);
+            if (showVira)
+            {
+                float viraH = cardH * 0.8f;
+                viraCard.Rect.Place(new Vector2(0.5f, 0.5f), new Vector2(viraH * CardView.Aspect, viraH));
+                viraCard.ShowFace(view.Vira.Value, false); // criada antes da camada das jogadas: fica por baixo delas
+            }
         }
+
+        public bool IsViraVisible => viraCard != null && viraCard.gameObject.activeSelf;
 
         /// <summary>Cópias das cartas da vaza encerrada voam até quem levou (ou somem no centro, se ninguém levou).</summary>
         private void FlyTrickToWinner(TrickResult trick, Vector2 cardSize)

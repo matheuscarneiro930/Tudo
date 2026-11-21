@@ -67,7 +67,10 @@ namespace Fodinha.Hosting
         // ------------------------------------------------------------------ relógios (para a interface)
 
         /// <summary>Tempo total de jogada (regra da partida).</summary>
-        public float TurnTimeTotal => engine.Rules.TurnTimeSeconds;
+        public float TurnTimeTotal => CurrentTurnSeconds;
+
+        /// <summary>Tempo da ação atual: apostar (BetTimeSeconds) ou jogar carta (TurnTimeSeconds).</summary>
+        private int CurrentTurnSeconds => engine.Phase == MatchPhase.Betting ? engine.Rules.BetTimeSeconds : engine.Rules.TurnTimeSeconds;
 
         /// <summary>Assento cujo relógio está correndo, ou -1 (ninguém / bot agindo).</summary>
         public int TimerSeat
@@ -173,7 +176,7 @@ namespace Fodinha.Hosting
 
             graceRemaining = pre;
             botRemaining = pre + RandomBetween(pacing.BotMinSeconds, pacing.BotMaxSeconds);
-            turnRemaining = engine.Rules.TurnTimeSeconds;
+            turnRemaining = CurrentTurnSeconds;
         }
 
         private float RandomBetween(float min, float max)

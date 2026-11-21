@@ -34,8 +34,8 @@ namespace Fodinha.Game.UI
         private Image backImage;
         private Image outline;
         private Text cornerRank;
-        private Text cornerSuit;
-        private Text centerSuit;
+        private Image cornerSuit;
+        private Image centerSuit;
         private Text bottomRank;
         private Text manilhaTag;
         private Text question;
@@ -69,10 +69,14 @@ namespace Fodinha.Game.UI
 
             cornerRank = UiKit.Label("Valor", body.transform, "", MaxRankSize, Palette.BlackSuit, TextAnchor.UpperLeft, FontStyle.Bold, true);
             cornerRank.rectTransform.Anchor(0.07f, 0.66f, 0.6f, 0.97f);
-            cornerSuit = UiKit.Label("NaipeCanto", body.transform, "", MaxRankSize, Palette.BlackSuit, TextAnchor.UpperLeft, FontStyle.Normal, true);
-            cornerSuit.rectTransform.Anchor(0.08f, 0.47f, 0.45f, 0.68f);
-            centerSuit = UiKit.Label("NaipeCentro", body.transform, "", MaxSuitSize, Palette.BlackSuit, TextAnchor.MiddleCenter, FontStyle.Normal, true);
-            centerSuit.rectTransform.Anchor(0.25f, 0.08f, 0.95f, 0.62f);
+            cornerSuit = UiKit.Image("NaipeCanto", body.transform, Palette.BlackSuit, SpriteFactory.Suit(Suit.Spades));
+            cornerSuit.preserveAspect = true;
+            cornerSuit.raycastTarget = false;
+            cornerSuit.rectTransform.Anchor(0.07f, 0.49f, 0.33f, 0.67f);
+            centerSuit = UiKit.Image("NaipeCentro", body.transform, Palette.BlackSuit, SpriteFactory.Suit(Suit.Spades));
+            centerSuit.preserveAspect = true;
+            centerSuit.raycastTarget = false;
+            centerSuit.rectTransform.Anchor(0.3f, 0.18f, 0.9f, 0.6f);
             bottomRank = UiKit.Label("ValorBaixo", body.transform, "", MaxRankSize, Palette.BlackSuit, TextAnchor.LowerRight, FontStyle.Bold, true);
             bottomRank.rectTransform.Anchor(0.5f, 0.03f, 0.93f, 0.25f);
 
@@ -108,13 +112,13 @@ namespace Fodinha.Game.UI
             bool red = card.Suit == Suit.Hearts || card.Suit == Suit.Diamonds;
             var color = red ? Palette.RedSuit : Palette.BlackSuit;
             string rank = card.Rank.Symbol();
-            string suit = card.Suit.Symbol();
+            var suitSprite = SpriteFactory.Suit(card.Suit);
 
             body.gameObject.SetActive(true);
             backImage.gameObject.SetActive(false);
             cornerRank.text = rank;
-            cornerSuit.text = suit;
-            centerSuit.text = suit;
+            cornerSuit.sprite = suitSprite;
+            centerSuit.sprite = suitSprite;
             bottomRank.text = rank;
             cornerRank.color = cornerSuit.color = centerSuit.color = bottomRank.color = color;
             body.color = isManilha ? Palette.Hex("FFF4D6") : Palette.CardFace;
