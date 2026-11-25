@@ -36,7 +36,31 @@ namespace Fodinha.Game.UI
         {
             id ??= "";
             if (tables.TryGetValue(id, out var s) && s != null) return s;
+            // Só a mesa em uso fica guardada em tamanho grande (1 MB cada); as outras vão embora.
+            foreach (var key in new System.Collections.Generic.List<string>(tables.Keys))
+            {
+                if (key == GamePrefs.TableTheme) continue;
+                var old = tables[key];
+                tables.Remove(key);
+                if (old != null) { var tex = old.texture; DestroySafe(old); if (tex != null) DestroySafe(tex); }
+            }
             return tables[id] = BuildTable(512, CosmeticLooks.Table(id));
+        }
+
+        private static void DestroySafe(Object o)
+        {
+            if (Application.isPlaying) Object.Destroy(o);
+            else Object.DestroyImmediate(o);
+        }
+
+        private static readonly System.Collections.Generic.Dictionary<string, Sprite> tableThumbs = new System.Collections.Generic.Dictionary<string, Sprite>();
+
+        /// <summary>Miniatura da mesa para a loja (128 px: 16× menos memória que a mesa grande).</summary>
+        public static Sprite TableThumbFor(string id)
+        {
+            id ??= "";
+            if (tableThumbs.TryGetValue(id, out var s) && s != null) return s;
+            return tableThumbs[id] = BuildTable(128, CosmeticLooks.Table(id));
         }
 
         public static Sprite CardBackFor(string id)

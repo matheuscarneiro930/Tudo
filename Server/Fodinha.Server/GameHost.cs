@@ -19,17 +19,51 @@ namespace Fodinha.Server
     {
         private const int TickMilliseconds = 50;
 
+        /// <summary>Mais que isso por segundo numa conexão é ataque: derruba na hora (antes de encher a fila).</summary>
+        private const int HardMessagesPerSecond = 60;
+
         private readonly ServerCore core;
+        private readonly ServerOptions options;
         private readonly ILogger<GameHost> logger;
         private readonly Channel<Action> inbox = Channel.CreateUnbounded<Action>(new UnboundedChannelOptions { SingleReader = true });
+        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> perAddress =
+            new System.Collections.Concurrent.ConcurrentDictionary<string, int>();
+        private int totalConnections;
 
-        public GameHost(ServerCore core, ILogger<GameHost> logger)
+        public GameHost(ServerCore core, ServerOptions options, ILogger<GameHost> logger)
         {
             this.core = core;
+            this.options = options ?? new ServerOptions();
             this.logger = logger;
         }
 
         public ServerCore Core => core;
+
+        public int OpenConnections => Volatile.Read(ref totalConnections);
+
+        /// <summary>Reserva uma vaga de conexão para o IP. Falso se o IP (ou o servidor) já está no limite.</summary>
+        public bool TryEnter(string address)
+        {
+            if (Interlocked.Increment(ref totalConnections) > options.MaxConnections)
+            {
+                Interlocked.Decrement(ref totalConnections);
+                return false;
+            }
+            int count = perAddress.AddOrUpdate(address, 1, (_, c) => c + 1);
+            if (count > options.MaxConnectionsPerAddress)
+            {
+                Exit(address);
+                return false;
+            }
+            return true;
+        }
+
+        public void Exit(string address)
+        {
+            Interlocked.Decrement(ref totalConnections);
+            if (perAddress.AddOrUpdate(address, 0, (_, c) => Math.Max(0, c - 1)) == 0)
+                perAddress.TryRemove(new System.Collections.Generic.KeyValuePair<string, int>(address, 0));
+        }
 
         /// <summary>Agenda uma ação no laço do jogo.</summary>
         public void Post(Action action) => inbox.Writer.TryWrite(action);
@@ -75,36 +109,51 @@ namespace Fodinha.Server
         }
 
         /// <summary>Atende uma conexão WebSocket até ela fechar.</summary>
-        public async Task HandleAsync(WebSocket socket, CancellationToken aborted)
+        public async Task HandleAsync(WebSocket socket, CancellationToken aborted, string address = "desconhecido")
         {
-            var link = new SocketLink(socket);
+            var link = new SocketLink(socket, address);
             var sender = link.RunSenderAsync(aborted);
             Post(() => core.OnConnected(link));
 
             var buffer = new byte[4096];
-            var message = new StringBuilder();
-            int messageBytes = 0;
+            // Junta os BYTES da mensagem e só depois converte (um "é" pode vir partido entre dois pedaços).
+            var message = new System.IO.MemoryStream();
+            var window = Stopwatch.StartNew();
+            int inWindow = 0;
             try
             {
                 while (socket.State == WebSocketState.Open && !aborted.IsCancellationRequested)
                 {
                     var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), aborted);
                     if (result.MessageType == WebSocketMessageType.Close) break;
-                    if (result.MessageType != WebSocketMessageType.Text) continue;
+                    if (result.MessageType != WebSocketMessageType.Text)
+                    {
+                        // O jogo só usa texto: binário é lixo (ou ataque).
+                        await socket.CloseAsync(WebSocketCloseStatus.InvalidMessageType, "Só texto", CancellationToken.None);
+                        break;
+                    }
 
-                    messageBytes += result.Count;
-                    if (messageBytes > Protocol.MaxClientMessageBytes)
+                    if (message.Length + result.Count > Protocol.MaxClientMessageBytes)
                     {
                         await socket.CloseAsync(WebSocketCloseStatus.MessageTooBig, "Mensagem grande demais", CancellationToken.None);
                         break;
                     }
-                    message.Append(Encoding.UTF8.GetString(buffer, 0, result.Count));
+                    message.Write(buffer, 0, result.Count);
                     if (!result.EndOfMessage) continue;
 
-                    string text = message.ToString();
-                    message.Clear();
-                    messageBytes = 0;
-                    Post(() => core.OnMessage(link, text));
+                    // Enxurrada grosseira: derruba antes de encher a fila do jogo.
+                    if (window.ElapsedMilliseconds >= 1000) { window.Restart(); inWindow = 0; }
+                    if (++inWindow > HardMessagesPerSecond)
+                    {
+                        await socket.CloseAsync(WebSocketCloseStatus.PolicyViolation, "Mensagens demais", CancellationToken.None);
+                        break;
+                    }
+
+                    string text;
+                    try { text = new UTF8Encoding(false, true).GetString(message.GetBuffer(), 0, (int)message.Length); }
+                    catch (DecoderFallbackException) { text = null; }
+                    message.SetLength(0);
+                    if (text != null) Post(() => core.OnMessage(link, text));
                 }
             }
             catch (WebSocketException) { }
@@ -126,15 +175,26 @@ namespace Fodinha.Server
         private sealed class SocketLink : IClientLink
         {
             private readonly WebSocket socket;
-            private readonly Channel<string> outbox = Channel.CreateBounded<string>(new BoundedChannelOptions(512)
+            // Fila de saída curta: quem não lê o que o servidor manda (de propósito, para encher a memória)
+            // é desconectado quando a fila enche. O app reconecta e recebe o estado completo de novo.
+            private readonly Channel<string> outbox = Channel.CreateBounded<string>(new BoundedChannelOptions(128)
             {
                 SingleReader = true,
-                FullMode = BoundedChannelFullMode.DropOldest
+                FullMode = BoundedChannelFullMode.Wait
             });
 
-            public SocketLink(WebSocket socket) => this.socket = socket;
+            public SocketLink(WebSocket socket, string address)
+            {
+                this.socket = socket;
+                Address = address;
+            }
 
-            public void Send(string json) => outbox.Writer.TryWrite(json);
+            public string Address { get; }
+
+            public void Send(string json)
+            {
+                if (!outbox.Writer.TryWrite(json)) Close();
+            }
 
             public void Close()
             {

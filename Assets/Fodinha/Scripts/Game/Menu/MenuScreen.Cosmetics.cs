@@ -73,7 +73,7 @@ namespace Fodinha.Game.Menu
                 stepper.Changed += index =>
                 {
                     avatarDraft[part] = index;
-                    avatarPreview.Show(avatarDraft.Encode());
+                    avatarPreview.ShowPreview(avatarDraft);
                 };
                 avatarSteppers.Add(stepper);
             }
@@ -90,7 +90,7 @@ namespace Fodinha.Game.Menu
         private void SyncAvatarSteppers()
         {
             for (int i = 0; i < avatarSteppers.Count; i++) avatarSteppers[i].SetIndex(avatarDraft[(AvatarSpec.Part)i]);
-            avatarPreview.Show(avatarDraft.Encode());
+            avatarPreview.ShowPreview(avatarDraft);
         }
 
         private void SaveAvatar()
@@ -159,7 +159,7 @@ namespace Fodinha.Game.Menu
             var preview = UiKit.Rect("Previa", row.transform).Anchor(0.02f, 0.06f, 0.36f, 0.94f);
             if (item.Category == ShopCategory.Table)
             {
-                var felt = UiKit.Image("Mesa", preview, Color.white, SpriteFactory.TableFor(item.Id));
+                var felt = UiKit.Image("Mesa", preview, Color.white, SpriteFactory.TableThumbFor(item.Id));
                 felt.rectTransform.Anchor(0.04f, 0.1f, 0.96f, 0.9f);
                 felt.raycastTarget = false;
             }

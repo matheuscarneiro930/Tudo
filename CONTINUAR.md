@@ -70,5 +70,24 @@ Você está recebendo o projeto **Fodinha Online** (Unity 6000.4.7f1 + C#, celul
   - Assento do adversário: avatar fora do quadrado (à esquerda), aposta numa plaquinha amarela grande,
     rodada cega mostra a carta "na testa" (em cima do avatar).
 - Decidido pelo dono: mesas e baralhos serão vendidos SÓ com dinheiro de verdade (na 2D); moedas ficam para apostas.
+- Botão "Convidar amigos iOS" (tela inicial): compartilha o link do SITE (não de sala). `ShareService` (Android: menu
+  nativo; site: navigator.share / copiar via `Plugins/WebGL/FodinhaShare.jslib`).
+
+## Segurança (pacote feito; testes em Server/Fodinha.Server.Tests/Security*.cs e AdRewardSecurityTests.cs)
+- Limites (ServerOptions): contas novas por IP/hora (20) e geral (400); vídeos premiados por conta (12) e IP (40) por dia;
+  código VIP errado por IP/hora (10); códigos de sala errados por minuto (15); "hello" em 15 s; mensagens por conexão
+  (rajada 40, 12/s, derruba após 200 ignoradas; GameHost derruba >60/s); conexões por IP (30) e total (5000);
+  fila de saída curta (quem não lê é desconectado); só texto UTF-8 válido no WebSocket.
+- IP real: `ClientAddress` (CF-Connecting-IP / True-Client-IP no Render; variável RENDER ou TRUST_PROXY=1). Conferir em /ip.
+- Origin: WebSocket de outro site é recusado (app nativo não manda Origin). Domínio próprio: ALLOWED_ORIGINS=https://...
+- Cabeçalhos: nosniff, X-Frame-Options, CSP frame-ancestors, Referrer/Permissions-Policy, HSTS; sem "Server: Kestrel".
+- Nome: `NameFilter` (invisíveis, inversão de texto, zalgo, tags, ofensas graves — lista no código).
+- Golpe da sala: o valor (stake) só muda com o dono sozinho na sala.
+- Token novo: 32 bytes aleatórios (RandomNumberGenerator). No app, servidor digitado em Configurações usa outro token.
+- AdMob SSV: GET /admob/ssv confere a assinatura do Google (`AdMobVerifier`) e credita. Para EXIGIR vídeo verificado:
+  1) AdMob → unidade premiada → Verificação no servidor → https://fodinha-server-0ccs.onrender.com/admob/ssv
+  2) Render → ADMOB_SSV_REQUIRED=1. (Sem isso, o "+100" continua valendo pelo pedido do app, com os limites acima.)
+- Memória: avatares 192 px (prévia do editor 256, fora do cache), cache 40 que nunca apaga avatar na tela; loja usa
+  miniaturas de mesa (128 px). Medir: `-Method Fodinha.EditorTools.MemoryReport.ReportFromCommandLine -Graphics`.
 - Próxima: 2D loja de acessórios com dinheiro real (Google Play Billing) — pode incluir "remover anúncios"
   (já existe o campo NoAds na conta).

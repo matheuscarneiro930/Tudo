@@ -41,6 +41,18 @@ namespace Fodinha.Game.Ads
         /// <summary>Quantos anúncios de fim de partida foram pedidos (testes).</summary>
         public static int InterstitialsRequested { get; private set; }
 
+        /// <summary>
+        /// Id do jogador no servidor: vai junto com o vídeo premiado para o Google avisar o servidor
+        /// QUEM assistiu (verificação no servidor). Não é segredo.
+        /// </summary>
+        public static string RewardUserId = "";
+
+        /// <summary>O servidor só aceita vídeo de verdade (sem tela provisória quando não há vídeo).</summary>
+        public static bool RequireRealAd;
+
+        /// <summary>Há uma rede de anúncios de verdade (AdMob no celular), e não a tela provisória.</summary>
+        public static bool HasRealAds => !(Current is PlaceholderAdService);
+
         public static void EnsureInitialized()
         {
             if (initialized) return;

@@ -103,15 +103,20 @@ namespace Fodinha.Ads
         {
             if (rewarded == null || !rewarded.CanShowAd())
             {
-                // Sem vídeo disponível (comum antes do app estar na loja): não deixa o jogador preso sem moedas.
-                // O servidor continua limitando a recompensa (só abaixo de 500 e com intervalo).
                 LoadRewarded();
+                // Com a verificação do Google ligada, a tela provisória não vale nada: avisa que não há vídeo.
+                if (AdService.RequireRealAd) { onFinished(false); return; }
+                // Sem vídeo disponível (comum antes do app estar na loja): não deixa o jogador preso sem moedas.
+                // O servidor continua limitando a recompensa (só abaixo de 500, com intervalo e limite diário).
                 new PlaceholderAdService().ShowRewarded(onFinished);
                 return;
             }
 
             var ad = rewarded;
             rewarded = null;
+            // Verificação no servidor (SSV): o Google avisa o nosso servidor que ESTE jogador assistiu.
+            if (!string.IsNullOrEmpty(AdService.RewardUserId))
+                ad.SetServerSideVerificationOptions(new ServerSideVerificationOptions { UserId = AdService.RewardUserId });
             bool earned = false;
             bool finished = false;
             void Finish()

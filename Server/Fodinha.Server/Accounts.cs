@@ -84,6 +84,9 @@ namespace Fodinha.Server
             return Convert.ToBase64String(bytes);
         }
 
+        public Account FindById(string id) =>
+            string.IsNullOrEmpty(id) ? null : byId.TryGetValue(id, out var a) ? a : null;
+
         public Account FindByToken(string token) =>
             string.IsNullOrEmpty(token) ? null : byTokenHash.TryGetValue(HashToken(token), out var a) ? a : null;
 

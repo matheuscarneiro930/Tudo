@@ -130,5 +130,7 @@ namespace Fodinha.Net
         public const string RewardUnavailable = "reward_unavailable";
         public const string Shop = "shop";
         public const string Code = "code";
+        /// <summary>Limite de segurança atingido (muitas contas, tentativas ou mensagens). Tente mais tarde.</summary>
+        public const string TooMany = "too_many";
     }
 }

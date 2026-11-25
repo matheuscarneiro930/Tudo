@@ -34,6 +34,7 @@ namespace Fodinha.Online
                 {
                     if (current == null) return;
                     if (e.code == ErrorCodes.RewardUnavailable || e.code == ErrorCodes.Shop || e.code == ErrorCodes.Code ||
+                        e.code == ErrorCodes.TooMany ||
                         (e.code == ErrorCodes.NotEnoughCoins && current.CurrentPage == MenuScreen.Page.Shop))
                         current.ShowToast(OnlineClient.Describe(e), 3f);
                 };
@@ -47,6 +48,7 @@ namespace Fodinha.Online
         {
             // Itens, mesa, baralho e "sem anúncios" valem também no modo offline: ficam guardados no aparelho.
             GamePrefs.ApplyServerProfile(p.owned, p.table, p.deck, p.noAds);
+            Game.Ads.AdService.RequireRealAd = p.rewardNeedsApp;
             if (current == null) return;
             current.SetCoins(p.coins, p.canClaimReward);
             current.RefreshCosmetics();
@@ -107,9 +109,21 @@ namespace Fodinha.Online
                 OnlineClient.Instance.Send(Protocol.ToServer.ClaimReward);
                 return;
             }
+            // Com a verificação do Google ligada, só vale vídeo de verdade (o do app de celular).
+            if (Game.Ads.AdService.RequireRealAd && !Game.Ads.AdService.HasRealAds)
+            {
+                screen.ShowToast("O vídeo de +100 moedas funciona no app de celular.", 3.5f);
+                return;
+            }
             Game.Ads.AdService.ShowRewarded(earned =>
             {
-                if (earned) OnlineClient.Instance.Send(Protocol.ToServer.ClaimReward);
+                if (earned)
+                {
+                    OnlineClient.Instance.Send(Protocol.ToServer.ClaimReward);
+                    // Verificado pelo Google: as moedas chegam quando o aviso dele bate no servidor (segundos).
+                    if (Game.Ads.AdService.RequireRealAd && current != null)
+                        current.ShowToast("Vídeo assistido! Suas moedas chegam em instantes.", 3f);
+                }
                 else if (current != null) current.ShowToast("O vídeo não está disponível agora. Tente de novo em instantes.");
             });
         }

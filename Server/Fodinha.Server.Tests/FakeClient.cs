@@ -25,10 +25,17 @@ namespace Fodinha.Server.Tests
         public WelcomeMsg Welcome;
         public int MatchUpdates;
 
-        public FakeClient(ServerCore core, string name)
+        private static int addressCounter;
+
+        /// <summary>IP de onde o cliente "vem". Cada cliente tem um diferente, a não ser que o teste escolha.</summary>
+        public string Address { get; set; }
+
+        public FakeClient(ServerCore core, string name, string address = null)
         {
             this.core = core;
             Name = name;
+            int n = System.Threading.Interlocked.Increment(ref addressCounter);
+            Address = address ?? "10." + (n / 65536 % 256) + "." + (n / 256 % 256) + "." + (n % 256);
         }
 
         public void Send(string json)

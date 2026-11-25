@@ -14,13 +14,51 @@ namespace Fodinha.Game.UI
     /// </summary>
     public static class AvatarPainter
     {
-        public const int TextureSize = 256;
-        private const int MaxCached = 64;
+        /// <summary>Tamanho dos avatares da mesa/lobby (aparecem com no máximo ~200 px na tela).</summary>
+        public const int TextureSize = 192;
+        /// <summary>Prévia grande do editor de avatar.</summary>
+        public const int PreviewSize = 256;
+        /// <summary>Avatares guardados (15 da mesa + lobby + menu, com folga). Cada um ~0,2 MB.</summary>
+        public const int MaxCached = 40;
 
         private static readonly Dictionary<string, Sprite> cache = new Dictionary<string, Sprite>();
-        private static readonly Queue<string> order = new Queue<string>();
+        private static readonly List<string> order = new List<string>();
+        private static readonly Dictionary<Sprite, int> inUse = new Dictionary<Sprite, int>();
 
         public static int CachedCount => cache.Count;
+
+        /// <summary>Marca um avatar do cache como "na tela" (não pode ser apagado).</summary>
+        public static void Retain(Sprite s)
+        {
+            if (s == null) return;
+            inUse.TryGetValue(s, out int n);
+            inUse[s] = n + 1;
+        }
+
+        public static void Release(Sprite s)
+        {
+            if (s == null || !inUse.TryGetValue(s, out int n)) return;
+            if (n <= 1) inUse.Remove(s);
+            else inUse[s] = n - 1;
+            Trim();
+        }
+
+        /// <summary>Apaga os mais antigos que não estão na tela, até caber no limite.</summary>
+        private static void Trim()
+        {
+            for (int i = 0; i < order.Count && cache.Count > MaxCached;)
+            {
+                string key = order[i];
+                if (cache.TryGetValue(key, out var s) && s != null && inUse.ContainsKey(s)) { i++; continue; }
+                order.RemoveAt(i);
+                if (!cache.TryGetValue(key, out s)) continue;
+                cache.Remove(key);
+                if (s == null) continue;
+                var tex = s.texture;
+                Object.DestroyImmediate(s);
+                if (tex != null) Object.DestroyImmediate(tex);
+            }
+        }
 
         // ------------------------------------------------------------------ paletas (índice = opção do AvatarSpec)
 
@@ -53,18 +91,11 @@ namespace Fodinha.Game.UI
             sprite.name = "Avatar_" + key;
             sprite.hideFlags = HideFlags.DontSave;
             cache[key] = sprite;
-            order.Enqueue(key);
-            while (order.Count > MaxCached)
-            {
-                var old = order.Dequeue();
-                if (old == key || !cache.TryGetValue(old, out var s)) continue;
-                cache.Remove(old);
-                if (s != null)
-                {
-                    Object.DestroyImmediate(s.texture);
-                    Object.DestroyImmediate(s);
-                }
-            }
+            order.Remove(key);
+            order.Add(key);
+            Retain(sprite);   // protege o recém-criado durante a limpeza
+            Trim();
+            Release(sprite);
             return sprite;
         }
 

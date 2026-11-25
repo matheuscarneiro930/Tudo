@@ -45,6 +45,8 @@ namespace Fodinha.Net
         public string deck;
         /// <summary>Conta sem anúncios (código VIP).</summary>
         public bool noAds;
+        /// <summary>O "+100 moedas" só vale com vídeo de verdade (app de celular, verificado pelo Google).</summary>
+        public bool rewardNeedsApp;
     }
 
     /// <summary>Código VIP digitado nas Configurações.</summary>

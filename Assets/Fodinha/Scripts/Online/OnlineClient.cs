@@ -262,6 +262,7 @@ namespace Fodinha.Online
                     if (w == null) return;
                     PlayerId = w.playerId;
                     GamePrefs.OnlineToken = w.token;
+                    Game.Ads.AdService.RewardUserId = w.playerId ?? "";
                     welcomed = true;
                     while (pending.Count > 0) SendNow(pending.Dequeue());
                     break;

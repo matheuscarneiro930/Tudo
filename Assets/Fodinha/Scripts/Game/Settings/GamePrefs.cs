@@ -72,13 +72,28 @@ namespace Fodinha.Game
         /// </summary>
         public static string OnlineToken
         {
-            get => PersistToken ? PlayerPrefs.GetString(KeyOnlineToken, "") : sessionToken;
+            get => PersistToken ? PlayerPrefs.GetString(TokenKey, "") : sessionToken;
             set
             {
                 if (!PersistToken) { sessionToken = value ?? ""; return; }
-                PlayerPrefs.SetString(KeyOnlineToken, value ?? "");
+                PlayerPrefs.SetString(TokenKey, value ?? "");
                 PlayerPrefs.Save();
             }
+        }
+
+        /// <summary>
+        /// Onde o token fica guardado. Servidor oficial: a chave de sempre. Servidor digitado em Configurações:
+        /// uma chave própria para aquele endereço — assim a chave da conta oficial NUNCA é enviada para um servidor
+        /// de terceiros (golpe "troque o servidor para este aqui").
+        /// </summary>
+        public static string TokenKey => HasCustomServer ? KeyOnlineToken + "." + StableHash(ServerUrl) : KeyOnlineToken;
+
+        /// <summary>Hash estável (FNV-1a) em hexadecimal.</summary>
+        private static string StableHash(string text)
+        {
+            uint h = 2166136261u;
+            foreach (char c in (text ?? "").Trim().ToLowerInvariant()) { h ^= c; h *= 16777619u; }
+            return h.ToString("x8");
         }
 
         /// <summary>

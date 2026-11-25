@@ -12,6 +12,9 @@ namespace Fodinha.Server
     {
         void Send(string json);
         void Close();
+
+        /// <summary>IP de quem conectou (para os limites de segurança).</summary>
+        string Address { get; }
     }
 
     public sealed class ServerOptions
@@ -43,6 +46,44 @@ namespace Fodinha.Server
         public int MaxCodeFailures = 5;
         public float CodeLockSeconds = 600f;
         public PacingSettings Pacing = new PacingSettings();
+
+        // ---- Segurança (limites contra robôs e abusos). Valores pensados para não atrapalhar uma turma
+        // ---- jogando no mesmo Wi-Fi (mesmo IP), mas barrar scripts.
+
+        /// <summary>Contas novas por IP por hora (o resto recebe "tente mais tarde").</summary>
+        public int MaxNewAccountsPerAddress = 20;
+        /// <summary>Contas novas no servidor inteiro por hora (protege o banco).</summary>
+        public int MaxNewAccountsGlobal = 400;
+        public float NewAccountWindowSeconds = 3600f;
+
+        /// <summary>Vídeos premiados por conta e por IP a cada 24 h.</summary>
+        public int MaxRewardsPerAccountPerDay = 12;
+        public int MaxRewardsPerAddressPerDay = 40;
+
+        /// <summary>Códigos VIP errados por IP por hora (somando todas as contas daquele IP).</summary>
+        public int MaxCodeFailuresPerAddress = 10;
+
+        /// <summary>Códigos de sala errados por jogador por minuto (chute de sala privada).</summary>
+        public int MaxJoinFailuresPerMinute = 15;
+
+        /// <summary>Quem conecta tem este tempo para se identificar ("hello").</summary>
+        public float HelloTimeoutSeconds = 15f;
+
+        /// <summary>Mensagens por conexão: rajada máxima e quantas por segundo depois dela.</summary>
+        public int MessageBurst = 40;
+        public float MessagesPerSecond = 12f;
+        /// <summary>Mensagens ignoradas seguidas até derrubar a conexão.</summary>
+        public int MaxDroppedMessages = 200;
+
+        /// <summary>
+        /// Vídeo premiado só vale com o aviso assinado do Google (AdMob SSV). Ligar (ADMOB_SSV_REQUIRED=1 no Render)
+        /// depois de configurar a URL de verificação no AdMob. Contas VIP (sem anúncios) não precisam.
+        /// </summary>
+        public bool RequireVerifiedAds;
+
+        /// <summary>Conexões simultâneas por IP e no total (aplicado pelo GameHost).</summary>
+        public int MaxConnectionsPerAddress = 30;
+        public int MaxConnections = 5000;
     }
 
     /// <summary>
@@ -60,6 +101,15 @@ namespace Fodinha.Server
         private readonly AccountBook accounts;
         private double now;
         private int idCounter;
+
+        // Segurança
+        private readonly Dictionary<IClientLink, double> awaitingHello = new Dictionary<IClientLink, double>();
+        private readonly Dictionary<IClientLink, MessageBucket> buckets = new Dictionary<IClientLink, MessageBucket>();
+        private readonly Dictionary<string, AddressGuard> addresses = new Dictionary<string, AddressGuard>();
+        private readonly Dictionary<string, SlidingCounter> rewardsByAccount = new Dictionary<string, SlidingCounter>();
+        private readonly SlidingCounter newAccountsGlobal = new SlidingCounter();
+        private double nextCleanup;
+        private const double Day = 86400.0, Hour = 3600.0;
 
         public ServerCore(ServerOptions options = null, IRandomSource rng = null, AccountBook accounts = null)
         {
@@ -80,11 +130,14 @@ namespace Fodinha.Server
 
         public void OnConnected(IClientLink link)
         {
-            // Nada até o "hello".
+            // Precisa se identificar ("hello") logo; senão a conexão é fechada (ver Tick).
+            if (!byLink.ContainsKey(link)) awaitingHello[link] = now;
         }
 
         public void OnDisconnected(IClientLink link)
         {
+            awaitingHello.Remove(link);
+            buckets.Remove(link);
             if (!byLink.TryGetValue(link, out var player)) return;
             byLink.Remove(link);
             if (player.Link != link) return; // já reconectou por outra conexão
@@ -104,6 +157,7 @@ namespace Fodinha.Server
 
         public void OnMessage(IClientLink link, string json)
         {
+            if (!AllowMessage(link)) return;
             if (!Protocol.TryDecode(json, out var env))
             {
                 SendError(link, ErrorCodes.BadMessage, "Mensagem inválida.");
@@ -194,6 +248,62 @@ namespace Fodinha.Server
             foreach (var p in byToken.Values.ToList())
                 if (p.Link == null && p.Room == null && now - p.DisconnectedAt > options.ForgetPlayerSeconds)
                     byToken.Remove(p.Token);
+
+            // Conexões que não se identificaram a tempo.
+            if (awaitingHello.Count > 0)
+            {
+                foreach (var kv in awaitingHello.ToList())
+                {
+                    if (now - kv.Value <= options.HelloTimeoutSeconds) continue;
+                    awaitingHello.Remove(kv.Key);
+                    buckets.Remove(kv.Key);
+                    kv.Key.Close();
+                }
+            }
+
+            // De vez em quando, joga fora contadores antigos (não crescer para sempre).
+            if (now >= nextCleanup)
+            {
+                nextCleanup = now + 60.0;
+                foreach (var kv in addresses.ToList())
+                {
+                    var g = kv.Value;
+                    g.NewAccounts.Count(now, options.NewAccountWindowSeconds);
+                    g.Rewards.Count(now, Day);
+                    g.CodeFailures.Count(now, Hour);
+                    if (g.NewAccounts.IsEmpty && g.Rewards.IsEmpty && g.CodeFailures.IsEmpty && now - g.LastSeen > Hour)
+                        addresses.Remove(kv.Key);
+                }
+                foreach (var kv in rewardsByAccount.ToList())
+                    if (kv.Value.Count(now, Day) == 0) rewardsByAccount.Remove(kv.Key);
+                newAccountsGlobal.Count(now, options.NewAccountWindowSeconds);
+            }
+        }
+
+        // ------------------------------------------------------------------ segurança
+
+        /// <summary>Limite de mensagens por conexão. Quem inunda tem o excesso ignorado e, se insistir, cai.</summary>
+        private bool AllowMessage(IClientLink link)
+        {
+            if (!buckets.TryGetValue(link, out var bucket))
+                buckets[link] = bucket = new MessageBucket(options.MessageBurst, options.MessagesPerSecond, now);
+            if (bucket.Kicked) return false;
+            if (bucket.Take(now)) return true;
+            if (bucket.Dropped == 1) SendError(link, ErrorCodes.TooMany, "Calma! Muitas ações ao mesmo tempo.");
+            if (bucket.Dropped > options.MaxDroppedMessages)
+            {
+                bucket.Kicked = true;
+                link.Close();
+            }
+            return false;
+        }
+
+        private AddressGuard GuardFor(IClientLink link)
+        {
+            string key = string.IsNullOrEmpty(link?.Address) ? "desconhecido" : link.Address;
+            if (!addresses.TryGetValue(key, out var g)) addresses[key] = g = new AddressGuard();
+            g.LastSeen = now;
+            return g;
         }
 
         // ------------------------------------------------------------------ handlers
@@ -208,6 +318,7 @@ namespace Fodinha.Server
             }
 
             string name = SanitizeName(msg.name);
+            if (msg.token != null && msg.token.Length > 128) msg.token = null; // token de verdade tem 64 caracteres
             Player player;
             if (!string.IsNullOrEmpty(msg.token) && byToken.TryGetValue(msg.token, out player))
             {
@@ -223,10 +334,23 @@ namespace Fodinha.Server
             {
                 // Conta já salva (ex.: o servidor reiniciou) ou conta nova com 500 moedas.
                 var account = accounts.FindByToken(msg.token);
-                string token = account != null ? msg.token : Guid.NewGuid().ToString("N");
+                if (account == null)
+                {
+                    // Conta nova: limite por IP e geral (robô criando contas para juntar moedas ou lotar o banco).
+                    var guard = GuardFor(link);
+                    if (guard.NewAccounts.Count(now, options.NewAccountWindowSeconds) >= options.MaxNewAccountsPerAddress ||
+                        newAccountsGlobal.Count(now, options.NewAccountWindowSeconds) >= options.MaxNewAccountsGlobal)
+                    {
+                        SendError(link, ErrorCodes.TooMany, "Muitas contas novas criadas nesta rede. Tente de novo mais tarde.");
+                        return;
+                    }
+                    guard.NewAccounts.Add(now);
+                    newAccountsGlobal.Add(now);
+                }
+                string token = account != null ? msg.token : NewSecret(32);
                 player = new Player
                 {
-                    Id = account?.Id ?? "p" + Guid.NewGuid().ToString("N").Substring(0, 12),
+                    Id = account?.Id ?? "p" + NewSecret(6),
                     Token = token,
                     Name = name
                 };
@@ -239,6 +363,7 @@ namespace Fodinha.Server
             if (byLink.TryGetValue(link, out var previous) && previous != player) previous.Link = null;
             player.Link = link;
             byLink[link] = player;
+            awaitingHello.Remove(link);
 
             link.Send(Protocol.Encode(Protocol.ToClient.Welcome, new WelcomeMsg
             {
@@ -314,9 +439,16 @@ namespace Fodinha.Server
 
         private void HandleJoinRoom(Player player, JoinRoomMsg msg)
         {
+            // Chute de código de sala privada: poucos erros por minuto.
+            if (player.JoinFailures.Count(now, 60.0) >= options.MaxJoinFailuresPerMinute)
+            {
+                player.SendError(ErrorCodes.TooMany, "Muitos códigos errados. Espere um minuto e tente de novo.");
+                return;
+            }
             string code = RoomCode.Normalize(msg?.code);
             if (!RoomCode.IsValid(code) || !rooms.TryGetValue(code, out var room))
             {
+                player.JoinFailures.Add(now);
                 player.SendError(ErrorCodes.RoomNotFound, "Sala não encontrada. Confira o código.");
                 return;
             }
@@ -367,6 +499,13 @@ namespace Fodinha.Server
             if (opts == null || opts.Rules == null || opts.GetValidationErrors().Count > 0 || opts.MaxPlayers < room.Members.Count)
             {
                 player.SendError(ErrorCodes.InvalidOptions, "Configuração inválida (o máximo não pode ser menor que os jogadores na sala).");
+                return;
+            }
+            // Golpe: subir o valor da sala na hora de começar (as moedas dos outros saem sem eles verem).
+            // O valor só muda com o dono sozinho na sala (bots não contam).
+            if (opts.Stake != room.Options.Stake && room.Members.Any(m => !m.IsBot && m.Player != player))
+            {
+                player.SendError(ErrorCodes.InvalidOptions, "O valor da sala só pode mudar antes de outros jogadores entrarem.");
                 return;
             }
             room.Options = opts.Clone();
@@ -685,6 +824,7 @@ namespace Fodinha.Server
                 delta = delta,
                 reason = reason,
                 canClaimReward = a.Coins < options.RewardCap,
+                rewardNeedsApp = options.RequireVerifiedAds && !a.NoAds,
                 avatar = a.EffectiveAvatar,
                 owned = new List<string>(a.Owned),
                 table = a.TableTheme,
@@ -710,19 +850,45 @@ namespace Fodinha.Server
         private void HandleClaimReward(Player player)
         {
             var a = player.Account;
-            if (a.Coins >= options.RewardCap)
+            // Com a verificação do Google ligada, o pedido do app não vale sozinho: as moedas chegam quando o
+            // Google avisar (CreditVerifiedReward). Conta VIP (sem anúncios) continua pedindo direto.
+            if (options.RequireVerifiedAds && !a.NoAds)
             {
-                player.SendError(ErrorCodes.RewardUnavailable, "Você já tem " + a.Coins + " moedas. O vídeo é para quem tem menos de " + options.RewardCap + ".");
+                SendProfile(player, 0, null);
                 return;
             }
-            if (now - a.LastRewardAt < options.RewardCooldownSeconds)
-            {
-                player.SendError(ErrorCodes.RewardUnavailable, "Aguarde alguns segundos para o próximo vídeo.");
-                return;
-            }
+            string refused = GrantReward(a, GuardFor(player.Link));
+            if (refused != null) player.SendError(ErrorCodes.RewardUnavailable, refused);
+        }
+
+        /// <summary>
+        /// Aviso do Google (AdMob SSV, assinatura já conferida): a conta <paramref name="accountId"/> assistiu um vídeo.
+        /// Falso se a conta não existe ou não pode receber agora (saldo, intervalo, limite do dia).
+        /// </summary>
+        public bool CreditVerifiedReward(string accountId)
+        {
+            var a = accounts.FindById(accountId);
+            if (a == null) return false;
+            return GrantReward(a, null) == null;
+        }
+
+        /// <summary>Dá a recompensa respeitando saldo, intervalo e limites diários. Devolve o motivo da recusa (ou null).</summary>
+        private string GrantReward(Account a, AddressGuard guard)
+        {
+            if (a.Coins >= options.RewardCap) return "Você já tem " + a.Coins + " moedas. O vídeo é para quem tem menos de " + options.RewardCap + ".";
+            if (now - a.LastRewardAt < options.RewardCooldownSeconds) return "Aguarde alguns segundos para o próximo vídeo.";
+            // Limite diário por conta e por IP (script pedindo moedas sem assistir nada).
+            if (!rewardsByAccount.TryGetValue(a.Id, out var mine)) rewardsByAccount[a.Id] = mine = new SlidingCounter();
+            if (mine.Count(now, Day) >= options.MaxRewardsPerAccountPerDay ||
+                (guard != null && guard.Rewards.Count(now, Day) >= options.MaxRewardsPerAddressPerDay))
+                return "Você já pegou todas as recompensas de hoje. Volte amanhã!";
+            mine.Add(now);
+            guard?.Rewards.Add(now);
             a.LastRewardAt = now;
             int gained = accounts.AddCoins(a, Math.Min(options.RewardAmount, options.RewardCap - a.Coins));
-            SendProfile(player, gained, "recompensa");
+            foreach (var p in byToken.Values)
+                if (p.Account == a) SendProfile(p, gained, "recompensa");
+            return null;
         }
 
         // ------------------------------------------------------------------ avatar, loja e código VIP
@@ -774,13 +940,16 @@ namespace Fodinha.Server
         private void HandleRedeemCode(Player player, CodeMsg msg)
         {
             var a = player.Account;
-            if (now < a.CodeLockedUntil)
+            var guard = GuardFor(player.Link);
+            // Bloqueio por conta E por IP (senão daria para chutar trocando de conta).
+            if (now < a.CodeLockedUntil || guard.CodeFailures.Count(now, Hour) >= options.MaxCodeFailuresPerAddress)
             {
                 player.SendError(ErrorCodes.Code, "Muitas tentativas. Tente de novo mais tarde.");
                 return;
             }
             if (!VipCodeMatches(msg?.code))
             {
+                guard.CodeFailures.Add(now);
                 if (++a.CodeFailures >= options.MaxCodeFailures)
                 {
                     a.CodeFailures = 0;
@@ -822,13 +991,12 @@ namespace Fodinha.Server
             return copy;
         }
 
-        public static string SanitizeName(string name)
-        {
-            if (string.IsNullOrWhiteSpace(name)) return "Jogador";
-            name = new string(name.Where(c => !char.IsControl(c) && c != '<' && c != '>').ToArray()).Trim();
-            if (name.Length > 14) name = name.Substring(0, 14);
-            return name.Length == 0 ? "Jogador" : name;
-        }
+        /// <summary>Nome limpo: sem invisíveis/inversão de texto, sem tags, sem ofensas graves (ver <see cref="NameFilter"/>).</summary>
+        public static string SanitizeName(string name) => NameFilter.Clean(name);
+
+        /// <summary>Segredo aleatório criptográfico em hexadecimal (<paramref name="bytes"/> × 2 caracteres).</summary>
+        private static string NewSecret(int bytes) =>
+            Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(bytes)).ToLowerInvariant();
 
         // ------------------------------------------------------------------ tipos internos
 
@@ -841,6 +1009,7 @@ namespace Fodinha.Server
             public Room Room;
             public double DisconnectedAt;
             public Account Account;   // carteira (persistida)
+            public readonly SlidingCounter JoinFailures = new SlidingCounter();
 
             public void Send(string json) => Link?.Send(json);
 
