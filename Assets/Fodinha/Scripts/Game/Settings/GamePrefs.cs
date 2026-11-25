@@ -23,6 +23,16 @@ namespace Fodinha.Game
         /// <summary>Servidor padrão do jogo online (Render). Para testar com um servidor local: ws://IP-DO-PC:5080/ws.</summary>
         public const string DefaultServerUrl = "wss://fodinha-server-0ccs.onrender.com/ws";
 
+        /// <summary>Site do jogo (versão para navegador; é por ele que quem tem iPhone joga).</summary>
+        public const string SiteUrl = "https://fodinha-server-0ccs.onrender.com";
+
+        /// <summary>Mensagem do botão "Convidar amigos iOS": leva para o site (não para uma sala).</summary>
+        public const string IosInviteMessage =
+            "Bora jogar Fodinha Online comigo! 🃏\n" +
+            "No iPhone, abre esse link no Safari e joga direto pelo navegador:\n" +
+            SiteUrl + "\n" +
+            "Dica: toque em Compartilhar → \"Adicionar à Tela de Início\" para ficar com o ícone do jogo.";
+
         /// <summary>Endereço do servidor (Configurações → Servidor). Vazio = padrão.</summary>
         public static string ServerUrl
         {

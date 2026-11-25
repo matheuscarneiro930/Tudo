@@ -44,6 +44,9 @@ namespace Fodinha.Game.Menu
         public event Action RankingRequested;
         public event Action ClaimRewardRequested;
 
+        /// <summary>Botão "Convidar amigos iOS": compartilhar o link do site.</summary>
+        public event Action InviteIosRequested;
+
         public Page CurrentPage { get; private set; } = Page.Home;
         public RulesEditor OfflineRules => offlineRules;
         public RulesEditor RoomRules => roomRules;
@@ -233,8 +236,10 @@ namespace Fodinha.Game.Menu
 
             AddHomeButton(page, "Jogar offline", 0, true, () => ShowPage(Page.Offline));
             AddHomeButton(page, "Criar sala", 1, false, () => ShowPage(Page.CreateRoom));
-            AddHomeButton(page, "Entrar com código", 2, false, () => ShowPage(Page.JoinRoom));
-            AddHomeButton(page, "Salas públicas", 3, false, () => ShowPage(Page.PublicRooms));
+            AddHomeButton(page, "Entrar com código", 2, false, () => ShowPage(Page.JoinRoom), 0);
+            AddHomeButton(page, "Salas públicas", 2, false, () => ShowPage(Page.PublicRooms), 1);
+            // Leva para o SITE do jogo (quem tem iPhone joga pelo navegador), não para uma sala.
+            AddHomeButton(page, "Convidar amigos iOS", 3, false, () => InviteIosRequested?.Invoke());
             AddHomeButton(page, "Loja", 4, false, () => ShowPage(Page.Shop), 0);
             AddHomeButton(page, "Configurações", 4, false, () => ShowPage(Page.Settings), 1);
 

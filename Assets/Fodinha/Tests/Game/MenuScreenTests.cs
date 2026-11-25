@@ -212,6 +212,23 @@ namespace Fodinha.Game.Tests
         }
 
         [Test]
+        public void ConvidarAmigosIos_PedeConvite_ComLinkDoSite()
+        {
+            bool asked = false;
+            menu.InviteIosRequested += () => asked = true;
+            var button = menu.transform.Find("AreaSegura/Pagina_Home/Botao_Convidar amigos iOS").GetComponent<Button>();
+            Assert.That(UiKit.ButtonLabel(button).text, Is.EqualTo("Convidar amigos iOS"));
+            button.onClick.Invoke();
+            Assert.That(asked, Is.True);
+
+            // A mensagem leva para o site, não para uma sala.
+            Assert.That(GamePrefs.IosInviteMessage, Does.Contain(GamePrefs.SiteUrl));
+            Assert.That(GamePrefs.IosInviteMessage, Does.Not.Contain("sala="));
+            Assert.That(ShareService.Share(GamePrefs.IosInviteMessage), Is.EqualTo(ShareService.Result.Copied), "No Editor, copia.");
+            Assert.That(ShareService.LastShared, Is.EqualTo(GamePrefs.IosInviteMessage));
+        }
+
+        [Test]
         public void NomeDoJogador_EhLimpo()
         {
             Assert.That(GamePrefs.SanitizeName("  <b>Zé</b>  "), Is.EqualTo("bZé/b"));

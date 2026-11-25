@@ -46,6 +46,7 @@ namespace Fodinha.Game.Menu
             screen.BuyRequested += item => WithOnline(h => h.BuyItem(screen, item));
             screen.EquipRequested += item => WithOnline(h => h.EquipItem(screen, item), quiet: true);
             screen.VipCodeSubmitted += code => WithOnline(h => h.RedeemCode(screen, code));
+            screen.InviteIosRequested += InviteIos;
             OnlineHandler?.OnMenuOpened(screen);
         }
 
@@ -53,6 +54,16 @@ namespace Fodinha.Game.Menu
         {
             screen = menuScreen;
             offlineScene = offlineSceneName;
+        }
+
+        /// <summary>Compartilha o link do site (WhatsApp etc.). Se o aparelho só puder copiar, avisa.</summary>
+        private void InviteIos()
+        {
+            var result = ShareService.Share(GamePrefs.IosInviteMessage);
+            if (result == ShareService.Result.Copied)
+                screen.ShowToast("Convite copiado! Cole no WhatsApp do seu amigo.", 3.5f);
+            else if (result == ShareService.Result.Failed)
+                screen.ShowToast("Mande este link para seu amigo: " + GamePrefs.SiteUrl, 6f);
         }
 
         private void StartOffline(OfflineMatchConfig config)
