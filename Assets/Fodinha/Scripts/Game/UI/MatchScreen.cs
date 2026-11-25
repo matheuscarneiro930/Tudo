@@ -23,7 +23,6 @@ namespace Fodinha.Game.UI
         private Text roundTitle;
         private Text roundDetail;
 
-        private Text manilhaText;
         private Button exitButton;
         private TableView table;
         private Image localPanel;
@@ -240,13 +239,11 @@ namespace Fodinha.Game.UI
             exitButton.GetComponent<RectTransform>().Anchor(0.02f, 0.18f, 0.17f, 0.82f);
 
             // Topo: só quantas cartas tem a mão ("3 cartas"); a vira fica no meio da mesa.
+            // A manilha não aparece escrita em lugar nenhum: cada um descobre pela vira.
             roundTitle = UiKit.Label("Cartas", bar, "", 44, Palette.Text, TextAnchor.LowerLeft, FontStyle.Bold, true);
-            roundTitle.rectTransform.Anchor(0.2f, 0.45f, 0.6f, 0.95f);
+            roundTitle.rectTransform.Anchor(0.2f, 0.45f, 0.85f, 0.95f);
             roundDetail = UiKit.Label("Detalhe", bar, "", 30, Palette.TextMuted, TextAnchor.UpperLeft, FontStyle.Normal, true);
-            roundDetail.rectTransform.Anchor(0.2f, 0.05f, 0.62f, 0.45f);
-
-            manilhaText = UiKit.Label("Manilha", bar, "", 34, Palette.Accent, TextAnchor.MiddleRight, FontStyle.Bold, true);
-            manilhaText.rectTransform.Anchor(0.6f, 0.1f, 0.865f, 0.9f); // à direita: botão de mensagens
+            roundDetail.rectTransform.Anchor(0.2f, 0.05f, 0.85f, 0.45f);
         }
 
         private void BuildLocalStrip(RectTransform strip)
@@ -339,10 +336,6 @@ namespace Fodinha.Game.UI
             if (view.Phase == MatchPhase.Playing || view.Phase == MatchPhase.TrickComplete)
                 detail += "  ·  rodada " + view.TrickNumber + " de " + view.CardsThisRound;
             roundDetail.text = detail;
-
-            manilhaText.text = view.Vira.HasValue
-                ? "Manilha: " + CardComparer.ManilhaFromVira(view.Vira.Value).Symbol()
-                : "";
         }
 
         public static string CardsLabel(int cards) => cards + (cards == 1 ? " carta" : " cartas");
