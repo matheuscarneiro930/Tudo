@@ -164,7 +164,7 @@ namespace Fodinha.Game.UI
             if (blind)
             {
                 var card = p.VisibleCards[0];
-                foreheadCard.ShowFace(card, view.Comparer != null && view.Comparer.IsManilha(card));
+                foreheadCard.ShowFace(card);
             }
         }
 

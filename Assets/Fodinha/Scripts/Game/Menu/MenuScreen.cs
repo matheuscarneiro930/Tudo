@@ -200,7 +200,7 @@ namespace Fodinha.Game.Menu
                 float angle = (i - 2) * -14f;
                 cv.Rect.Place(new Vector2(0.5f, 0.38f), new Vector2(170f, 246f), new Vector2((i - 2) * 92f, -Mathf.Abs(i - 2) * 16f));
                 cv.Rect.localRotation = Quaternion.Euler(0f, 0f, angle);
-                cv.ShowFace(Card.Parse(cards[i]), i == 2);
+                cv.ShowFace(Card.Parse(cards[i]));
                 cv.SetInteractable(false);
             }
 

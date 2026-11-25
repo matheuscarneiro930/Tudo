@@ -24,7 +24,6 @@ namespace Fodinha.Game.UI
         public static readonly Color CardFace = Hex("FBFAF5");
         public static readonly Color CardBack = Hex("8E1B2B");
         public static readonly Color CardBackPattern = Hex("B8323F");
-        public static readonly Color Manilha = Hex("FFB300");
         public static readonly Color Good = Hex("4CD964");
         public static readonly Color Bad = Hex("FF5A5A");
         public static readonly Color Button = Hex("FFC83D");

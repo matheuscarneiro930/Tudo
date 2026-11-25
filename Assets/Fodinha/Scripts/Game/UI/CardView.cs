@@ -37,7 +37,6 @@ namespace Fodinha.Game.UI
         private Image cornerSuit;
         private Image centerSuit;
         private Text bottomRank;
-        private Text manilhaTag;
         private Text question;
         private CanvasGroup group;
 
@@ -90,13 +89,6 @@ namespace Fodinha.Game.UI
             qOutline.effectColor = new Color(0f, 0f, 0f, 0.6f);
             qOutline.effectDistance = new Vector2(2f, -2f);
 
-            manilhaTag = UiKit.Label("Manilha", rt, "MANILHA", 60, Palette.AccentDark, TextAnchor.MiddleCenter, FontStyle.Bold, true);
-            var tagBg = UiKit.Image("FundoManilha", rt, Palette.Manilha, SpriteFactory.RoundedRect, 6f);
-            tagBg.raycastTarget = false;
-            tagBg.rectTransform.Anchor(0.08f, -0.06f, 0.92f, 0.08f);
-            manilhaTag.transform.SetParent(tagBg.transform, false);
-            manilhaTag.rectTransform.Anchor(0.04f, 0.05f, 0.96f, 0.95f);
-
             outline = UiKit.Image("Contorno", rt, Palette.Accent, SpriteFactory.RoundedOutline, 2.5f);
             outline.rectTransform.Fill();
             outline.rectTransform.offsetMin = new Vector2(-5f, -5f);
@@ -106,7 +98,11 @@ namespace Fodinha.Game.UI
             ShowBack();
         }
 
-        public void ShowFace(Card card, bool isManilha)
+        /// <summary>
+        /// Mostra a frente da carta. A manilha não tem marca nenhuma (nem etiqueta nem cor diferente):
+        /// cada jogador descobre pela vira, então quem não presta atenção pode errar.
+        /// </summary>
+        public void ShowFace(Card card)
         {
             Card = card;
             bool red = card.Suit == Suit.Hearts || card.Suit == Suit.Diamonds;
@@ -121,8 +117,7 @@ namespace Fodinha.Game.UI
             centerSuit.sprite = suitSprite;
             bottomRank.text = rank;
             cornerRank.color = cornerSuit.color = centerSuit.color = bottomRank.color = color;
-            body.color = isManilha ? Palette.Hex("FFF4D6") : Palette.CardFace;
-            manilhaTag.transform.parent.gameObject.SetActive(isManilha);
+            body.color = Palette.CardFace;
         }
 
         public void ShowBack()
@@ -131,7 +126,6 @@ namespace Fodinha.Game.UI
             body.gameObject.SetActive(false);
             backImage.gameObject.SetActive(true);
             question.gameObject.SetActive(false);
-            manilhaTag.transform.parent.gameObject.SetActive(false);
         }
 
         /// <summary>Carta virada para baixo com "?" (a própria carta na rodada cega).</summary>

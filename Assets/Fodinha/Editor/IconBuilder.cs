@@ -93,7 +93,7 @@ namespace Fodinha.EditorTools
                 cv.AllowLargeText(3f);
                 cv.Rect.Place(new Vector2(0.5f + offsets[i], 0.47f + (i == 2 ? 0.03f : 0f)), new Vector2(h * CardView.Aspect, h));
                 cv.Rect.localRotation = Quaternion.Euler(0f, 0f, angles[i]);
-                cv.ShowFace(Card.Parse(cards[i]), false);
+                cv.ShowFace(Card.Parse(cards[i]));
                 cv.SetInteractable(false);
                 // contorno dourado na carta do meio (o zap)
                 cv.SetHighlight(i == 2, Palette.Accent);

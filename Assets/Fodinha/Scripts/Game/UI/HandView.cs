@@ -78,8 +78,7 @@ namespace Fodinha.Game.UI
                 if (i < shown.Count)
                 {
                     var c = shown[i];
-                    bool manilha = view.Comparer != null && view.Comparer.IsManilha(c);
-                    card.ShowFace(c, manilha);
+                    card.ShowFace(c);
                     card.SetInteractable(canPlay);
                     card.SetHighlight(selected.HasValue && selected.Value == c);
                     card.SetDimmed(false);

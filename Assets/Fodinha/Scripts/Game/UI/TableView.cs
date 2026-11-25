@@ -174,7 +174,7 @@ namespace Fodinha.Game.UI
                     cv.Rect.localScale = Vector3.one;
                 }
                 cv.Rect.SetSiblingIndex(i);
-                cv.ShowFace(play.Card, view.Comparer != null && view.Comparer.IsManilha(play.Card));
+                cv.ShowFace(play.Card);
 
                 // Carta nova na mesa: voa de quem jogou até o centro.
                 if (shownTrickSeats.Add(play.Seat) && tableSize.x > 1f)
@@ -231,7 +231,7 @@ namespace Fodinha.Game.UI
             {
                 float viraH = cardH * 0.8f;
                 viraCard.Rect.Place(new Vector2(0.5f, 0.5f), new Vector2(viraH * CardView.Aspect, viraH));
-                viraCard.ShowFace(view.Vira.Value, false); // criada antes da camada das jogadas: fica por baixo delas
+                viraCard.ShowFace(view.Vira.Value); // criada antes da camada das jogadas: fica por baixo delas
             }
         }
 
@@ -253,7 +253,7 @@ namespace Fodinha.Game.UI
                 var dir = directionBySeat.TryGetValue(play.Seat, out var d) ? d : Vector2.zero;
                 var anchor = TableLayout.TrickAnchor(dir);
                 ghost.Rect.Place(anchor, cardSize);
-                ghost.ShowFace(play.Card, false);
+                ghost.ShowFace(play.Card);
                 ghost.SetHighlight(false);
                 ghost.SetDimmed(false);
                 ghost.gameObject.SetActive(true);
