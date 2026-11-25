@@ -14,6 +14,21 @@ namespace Fodinha.Net
         public int version;
         /// <summary>Avatar escolhido no aparelho (<see cref="AvatarSpec"/> em texto). Vazio = o servidor sorteia.</summary>
         public string avatar;
+        /// <summary>De onde joga (só para as estatísticas): "android", "ios", "site-iphone", "site-android", "site-pc", "pc".</summary>
+        public string platform;
+    }
+
+    /// <summary>Mensagem pronta (<see cref="QuickChat"/>): vai só o número, nunca texto.</summary>
+    public sealed class ChatMsg
+    {
+        public int id = -1;
+    }
+
+    /// <summary>Mensagem pronta de alguém da sala: assento na partida (-1 = sem assento) e o número da mensagem.</summary>
+    public sealed class ChatDto
+    {
+        public int seat = -1;
+        public int id = -1;
     }
 
     public sealed class WelcomeMsg

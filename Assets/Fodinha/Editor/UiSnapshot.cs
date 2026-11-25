@@ -24,6 +24,8 @@ namespace Fodinha.EditorTools
             public int Seed;
             public bool HumanAuto;
             public Func<MatchView, bool> Target;
+            /// <summary>Algo a fazer na tela antes da captura (ex.: abrir as mensagens).</summary>
+            public Action<MatchScreen> Extra;
         }
 
         [MenuItem("Fodinha/Capturar telas de teste")]
@@ -77,6 +79,15 @@ namespace Fodinha.EditorTools
                     Target = v => v.Phase == MatchPhase.Betting && v.CardsThisRound >= 3 && v.IsMyTurn },
                 new Scenario { Name = "09_5j_fim", Players = 5, Seed = 19, HumanAuto = true,
                     Target = v => v.Phase == MatchPhase.MatchOver },
+                new Scenario { Name = "10_6j_mensagens", Players = 6, Seed = 20,
+                    Target = v => v.Phase == MatchPhase.Playing && v.CardsThisRound >= 2 && v.IsMyTurn,
+                    Extra = sc => { sc.Chat.Show(0, Fodinha.Hosting.QuickChat.Scared); sc.Chat.Show(2, Fodinha.Hosting.QuickChat.BeginnersLuck); sc.Chat.Show(4, Fodinha.Hosting.QuickChat.Lol); } },
+                new Scenario { Name = "11_6j_quadro_mensagens", Players = 6, Seed = 20,
+                    Target = v => v.Phase == MatchPhase.Playing && v.CardsThisRound >= 2 && v.IsMyTurn,
+                    Extra = sc => sc.Chat.Open() },
+                new Scenario { Name = "12_15j_mensagens", Players = 15, Seed = 15,
+                    Target = v => v.Phase == MatchPhase.Playing && v.CardsThisRound >= 2 && v.IsMyTurn,
+                    Extra = sc => { sc.Chat.Show(1, Fodinha.Hosting.QuickChat.Mine); sc.Chat.Show(8, Fodinha.Hosting.QuickChat.Cry); sc.Chat.Show(14, Fodinha.Hosting.QuickChat.NoWay); } },
             };
 
             foreach (var s in scenarios)
@@ -221,6 +232,8 @@ namespace Fodinha.EditorTools
 
                 Canvas.ForceUpdateCanvases();
                 screen.Render(controller.View);
+                Canvas.ForceUpdateCanvases();
+                s.Extra?.Invoke(screen);
                 Canvas.ForceUpdateCanvases();
 
                 cam.Render();

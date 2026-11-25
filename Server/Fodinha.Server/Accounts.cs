@@ -183,6 +183,55 @@ namespace Fodinha.Server
             return true;
         }
 
+        /// <summary>Cópia de todas as contas (para a cópia de segurança).</summary>
+        public List<Account> All() => byId.Values.Select(a => a.Snapshot()).ToList();
+
+        /// <summary>
+        /// Volta as contas da cópia ao estado dela. Contas que não estão na cópia (criadas depois) ficam como estão.
+        /// Uma conta da cópia cujo token já pertence a OUTRA conta é ignorada (não junta duas contas numa).
+        /// </summary>
+        public RestoreResult Restore(IEnumerable<Account> backup)
+        {
+            var result = new RestoreResult();
+            foreach (var b in backup)
+            {
+                if (b?.Id == null || b.TokenHash == null) { result.Skipped++; continue; }
+                byTokenHash.TryGetValue(b.TokenHash, out var holder);
+                if (byId.TryGetValue(b.Id, out var cur))
+                {
+                    if (holder != null && holder != cur) { result.Skipped++; continue; }
+                    if (cur.TokenHash != b.TokenHash)
+                    {
+                        byTokenHash.Remove(cur.TokenHash);
+                        cur.TokenHash = b.TokenHash;
+                        byTokenHash[cur.TokenHash] = cur;
+                    }
+                    cur.Name = b.Name;
+                    cur.Coins = Math.Max(0, b.Coins);
+                    cur.Games = b.Games;
+                    cur.Wins = b.Wins;
+                    cur.CreatedAt = b.CreatedAt;
+                    cur.Avatar = b.Avatar ?? "";
+                    cur.Owned = new List<string>(b.Owned ?? new List<string>());
+                    cur.TableTheme = b.TableTheme;
+                    cur.DeckTheme = b.DeckTheme;
+                    cur.NoAds = b.NoAds;
+                    Changed(cur);
+                    result.Updated++;
+                }
+                else
+                {
+                    if (holder != null) { result.Skipped++; continue; }
+                    var a = b.Snapshot();
+                    byId[a.Id] = a;
+                    byTokenHash[a.TokenHash] = a;
+                    Changed(a);
+                    result.Added++;
+                }
+            }
+            return result;
+        }
+
         /// <summary>Ranking: mais moedas primeiro; empate, mais vitórias; depois quem chegou antes.</summary>
         public List<Account> Ranking() =>
             byId.Values.OrderByDescending(a => a.Coins).ThenByDescending(a => a.Wins).ThenBy(a => a.CreatedAt).ToList();

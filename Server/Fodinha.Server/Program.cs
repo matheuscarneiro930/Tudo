@@ -43,8 +43,26 @@ namespace Fodinha.Server
         /// Monta o servidor. Porta: variável PORT (padrão 5080). Para testes, <paramref name="options"/> permite
         /// trocar o ritmo (ex.: sem pausas) e <paramref name="urls"/> a porta.
         /// </summary>
+        /// <summary>Carrega os números do painel. Se o banco falhar, o jogo sobe mesmo assim (os números continuam somando).</summary>
+        private static void LoadStats(StatsBook stats, IStatsStore store)
+        {
+            for (int attempt = 1; attempt <= 3; attempt++)
+            {
+                try
+                {
+                    stats.Load(store.LoadAsync(stats.Today).GetAwaiter().GetResult());
+                    return;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("[Fodinha] Falha ao carregar estatísticas (tentativa " + attempt + "): " + e.Message);
+                    System.Threading.Thread.Sleep(1000 * attempt);
+                }
+            }
+        }
+
         public static WebApplication BuildApp(string[] args, ServerOptions options = null, string urls = null, IAccountStore store = null,
-                                              AdMobVerifier verifier = null)
+                                              AdMobVerifier verifier = null, IStatsStore statsStore = null, IBackupStore backupStore = null)
         {
             var builder = WebApplication.CreateBuilder(args);
             string port = Environment.GetEnvironmentVariable("PORT") ?? "5080";
@@ -74,26 +92,44 @@ namespace Fodinha.Server
             if (!string.IsNullOrWhiteSpace(vip)) serverOptions.VipCode = vip;
             // Vídeo premiado só com o aviso assinado do Google (ligar depois de configurar a URL no AdMob).
             if (Environment.GetEnvironmentVariable("ADMOB_SSV_REQUIRED") == "1") serverOptions.RequireVerifiedAds = true;
+            // Senha do painel (/painel): só no painel do Render, nunca no código.
+            string adminKey = Environment.GetEnvironmentVariable("ADMIN_KEY");
+            if (string.IsNullOrEmpty(serverOptions.AdminKey) && !string.IsNullOrWhiteSpace(adminKey)) serverOptions.AdminKey = adminKey.Trim();
 
             // Contas: Postgres (variável DATABASE_URL) ou memória (desenvolvimento/testes).
             string databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
-            store ??= string.IsNullOrWhiteSpace(databaseUrl) ? new MemoryAccountStore() : new PostgresAccountStore(databaseUrl);
+            bool useDb = !string.IsNullOrWhiteSpace(databaseUrl);
+            store ??= useDb ? new PostgresAccountStore(databaseUrl) : new MemoryAccountStore();
             var loaded = LoadAccounts(store);
+
+            // Números do painel e cópias de segurança: no mesmo banco.
+            statsStore ??= useDb ? new PostgresStatsStore(databaseUrl) : new MemoryStatsStore();
+            backupStore ??= useDb ? new PostgresBackupStore(databaseUrl) : new MemoryBackupStore();
+            var stats = new StatsBook();
+            LoadStats(stats, statsStore);
 
             builder.Services.AddSingleton(serverOptions);
             builder.Services.AddSingleton(store);
             builder.Services.AddSingleton<AccountWriter>();
             builder.Services.AddHostedService(sp => sp.GetRequiredService<AccountWriter>());
+            builder.Services.AddSingleton(stats);
+            builder.Services.AddSingleton(statsStore);
+            builder.Services.AddSingleton<StatsWriter>();
+            builder.Services.AddHostedService(sp => sp.GetRequiredService<StatsWriter>());
             builder.Services.AddSingleton(sp =>
             {
                 var book = new AccountBook(loaded);
                 var writer = sp.GetRequiredService<AccountWriter>();
                 book.Persist = writer.Enqueue;
-                return new ServerCore(sp.GetRequiredService<ServerOptions>(), null, book);
+                return new ServerCore(sp.GetRequiredService<ServerOptions>(), null, book, stats);
             });
             builder.Services.AddSingleton<GameHost>();
             builder.Services.AddSingleton(verifier ?? new AdMobVerifier());
             builder.Services.AddHostedService(sp => sp.GetRequiredService<GameHost>());
+            builder.Services.AddSingleton(backupStore);
+            builder.Services.AddSingleton(sp => new BackupService(sp.GetRequiredService<GameHost>(), backupStore,
+                                                                  sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<BackupService>>()));
+            builder.Services.AddHostedService(sp => sp.GetRequiredService<BackupService>());
 
             var app = builder.Build();
 
@@ -113,6 +149,13 @@ namespace Fodinha.Server
             });
 
             app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(20) });
+
+            // Visitas ao site (quem abre a página do jogo). Não guarda IP: ver StatsBook.
+            app.Use(async (ctx, next) =>
+            {
+                if (VisitCounter.IsPage(ctx.Request)) VisitCounter.Count(stats, ctx, trustProxy);
+                await next();
+            });
 
             // Versão web do jogo (wwwroot/, gerada pelo Unity): "/" abre o jogo no navegador.
             app.UseDefaultFiles();
@@ -153,6 +196,9 @@ namespace Fodinha.Server
                     await host.Query(core => core.CreditVerifiedReward(result.UserId));
                 return Results.Ok(); // o Google só precisa saber que recebemos
             });
+
+            // Painel do dono (senha na variável ADMIN_KEY).
+            Dashboard.Map(app, serverOptions, trustProxy);
 
             app.Map(Protocol.Path, async (HttpContext ctx, GameHost host) =>
             {

@@ -74,6 +74,8 @@ namespace Fodinha.Online
         public event Action<string> LeftRoom;
         public event Action<ProfileMsg> ProfileReceived;
         public event Action<RankingMsg> RankingReceived;
+        /// <summary>Mensagem pronta de alguém da sala.</summary>
+        public event Action<ChatDto> ChatReceived;
         /// <summary>Não foi possível conectar (mensagem para o jogador).</summary>
         public event Action<string> ConnectFailed;
 
@@ -206,7 +208,8 @@ namespace Fodinha.Online
                         name = GamePrefs.PlayerName,
                         token = GamePrefs.OnlineToken,
                         version = Protocol.Version,
-                        avatar = GamePrefs.Avatar
+                        avatar = GamePrefs.Avatar,
+                        platform = GamePrefs.PlatformTag
                     }));
                 }
                 else if (t.Status == SocketStatus.Closed)
@@ -295,6 +298,11 @@ namespace Fodinha.Online
                     if (m?.view == null) return;
                     LastMatch = m;
                     MatchReceived?.Invoke(m);
+                    break;
+
+                case Protocol.ToClient.Chat:
+                    var chat = Protocol.Payload<ChatDto>(env);
+                    if (chat != null) ChatReceived?.Invoke(chat);
                     break;
 
                 case Protocol.ToClient.LeftRoom:

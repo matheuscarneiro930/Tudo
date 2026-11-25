@@ -126,6 +126,38 @@ namespace Fodinha.Game.UI
             return !(neg && pos);
         }
 
+        private static Sprite chatIcon;
+
+        /// <summary>Ícone do botão de mensagens: balão de fala com três pontinhos vazados.</summary>
+        public static Sprite ChatIcon => chatIcon != null ? chatIcon : (chatIcon = BuildShape(96, InsideChatIcon));
+
+        public static bool InsideChatIcon(float x, float y)
+        {
+            bool body = RoundedRectDistance(x + 0.44f, y + 0.24f, 0.88f, 0.62f, 0.17f) <= 0f;
+            bool tail = InTriangle(x, y, -0.3f, -0.18f, -0.04f, -0.18f, -0.34f, -0.46f);
+            if (!body && !tail) return false;
+            return !(InCircle(x, y, -0.21f, 0.07f, 0.065f) || InCircle(x, y, 0f, 0.07f, 0.065f) || InCircle(x, y, 0.21f, 0.07f, 0.065f));
+        }
+
+        /// <summary>Forma branca com bordas suaves a partir de um teste "está dentro?" (coordenadas de -0,5 a 0,5).</summary>
+        private static Sprite BuildShape(int size, System.Func<float, float, bool> inside)
+        {
+            var tex = NewTexture(size, size);
+            var pixels = new Color32[size * size];
+            const int samples = 4;
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                int hits = 0;
+                for (int sy = 0; sy < samples; sy++)
+                for (int sx = 0; sx < samples; sx++)
+                    if (inside((x + (sx + 0.5f) / samples) / size - 0.5f, (y + (sy + 0.5f) / samples) / size - 0.5f)) hits++;
+                pixels[y * size + x] = new Color32(255, 255, 255, (byte)(255 * hits / (samples * samples)));
+            }
+            tex.SetPixels32(pixels);
+            return Finish(tex, Vector4.zero);
+        }
+
         private static Sprite BuildSuit(Core.Suit suit, int size)
         {
             var tex = NewTexture(size, size);

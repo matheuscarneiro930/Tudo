@@ -63,7 +63,7 @@ namespace Fodinha.Game.Menu
             if (result == ShareService.Result.Copied)
                 screen.ShowToast("Convite copiado! Cole no WhatsApp do seu amigo.", 3.5f);
             else if (result == ShareService.Result.Failed)
-                screen.ShowToast("Mande este link para seu amigo: " + GamePrefs.SiteUrl, 6f);
+                screen.ShowToast("Mande este link para seu amigo: " + GamePrefs.InviteUrl, 6f);
         }
 
         private void StartOffline(OfflineMatchConfig config)

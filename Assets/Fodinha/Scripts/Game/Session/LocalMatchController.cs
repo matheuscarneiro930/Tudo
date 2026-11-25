@@ -11,7 +11,7 @@ namespace Fodinha.Game
     /// Roda o <see cref="MatchEngine"/> através do <see cref="MatchDirector"/> (pausas, timer e bots)
     /// e entrega à interface apenas a visão do assento 0 — exatamente como o host fará na rede.
     /// </summary>
-    public sealed class LocalMatchController : MonoBehaviour, IMatchSession
+    public sealed class LocalMatchController : MonoBehaviour, IMatchSession, IQuickChatSession
     {
         /// <summary>Configuração escolhida no menu para a próxima partida offline (null = usar a do Inspector).</summary>
         public static OfflineMatchConfig PendingConfig;
@@ -28,9 +28,18 @@ namespace Fodinha.Game
         private int publishedVersion = -1;
         private readonly Queue<MatchEvent> pendingEvents = new Queue<MatchEvent>();
 
+        // Mensagens prontas: o jogador manda, os bots às vezes respondem/provocam.
+        private BotBanter banter;
+        private QuickChatGate chatGate = new QuickChatGate(0.1);
+        private double chatClock;
+
         public event Action<MatchView> ViewChanged;
         public event Action<MatchEvent> EventReceived;
         public event Action<ActionResult> ActionRejected;
+        public event Action<int, int> ChatReceived;
+
+        /// <summary>Bots da partida (testes).</summary>
+        public BotBanter Banter => banter;
 
         public const int HumanSeat = 0;
 
@@ -89,6 +98,12 @@ namespace Fodinha.Game
             publishedVersion = -1;
             view = null;
 
+            banter = new BotBanter(engine, director.IsBotSeat, new SystemRandomSource(unchecked(seed * 17 + 3)));
+            director.EventRaised += banter.OnEvent;
+            banter.Spoke += (seat, id) => ChatReceived?.Invoke(seat, id);
+            chatGate = new QuickChatGate(0.1);
+            chatClock = 0;
+
             director.Start();
             Publish();
         }
@@ -104,6 +119,7 @@ namespace Fodinha.Game
             if (director == null) return;
             director.Tick(Time.deltaTime * speed);
             Publish();
+            TickChat(Time.unscaledDeltaTime);
         }
 
         /// <summary>Avança a partida manualmente (testes). Equivale a um quadro com <paramref name="seconds"/> de duração.</summary>
@@ -112,6 +128,22 @@ namespace Fodinha.Game
             if (director == null) return;
             director.Tick(seconds);
             Publish();
+            TickChat(seconds);
+        }
+
+        // Relógio das mensagens em tempo real (não acelera com a velocidade do jogo).
+        private void TickChat(float seconds)
+        {
+            chatClock += seconds;
+            banter?.Tick(seconds);
+        }
+
+        /// <summary>Mensagem pronta do jogador: aparece na hora; um bot pode responder.</summary>
+        public void SendChat(int messageId)
+        {
+            if (director == null || !QuickChat.IsValid(messageId) || !chatGate.TryAccept(chatClock)) return;
+            ChatReceived?.Invoke(HumanSeat, messageId);
+            banter?.OnPlayerChat(HumanSeat, messageId);
         }
 
         // ------------------------------------------------------------------ pedidos do jogador

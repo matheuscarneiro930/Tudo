@@ -91,3 +91,22 @@ Você está recebendo o projeto **Fodinha Online** (Unity 6000.4.7f1 + C#, celul
   miniaturas de mesa (128 px). Medir: `-Method Fodinha.EditorTools.MemoryReport.ReportFromCommandLine -Graphics`.
 - Próxima: 2D loja de acessórios com dinheiro real (Google Play Billing) — pode incluir "remover anúncios"
   (já existe o campo NoAds na conta).
+
+## Painel do dono, números e cópias de segurança
+- Painel: https://fodinha-server-0ccs.onrender.com/painel (senha = variável ADMIN_KEY no Render, mín. 12 caracteres;
+  sem ela o painel não existe/404). Senha errada 10x por IP/hora = bloqueio. Código: `Server/Fodinha.Server/Dashboard.cs`.
+- Números por dia (horário de Brasília) em `Stats.cs` (`StatsBook`, nomes em `Metric`; tabelas stats_daily, stats_unique,
+  stats_meta). Visitas = abrir "/" (robôs e prévia de link não contam); "pessoas diferentes" por código HMAC do IP com
+  segredo do banco, apagado no dia seguinte (IP nunca é guardado). Convite: link `?origem=convite` (GamePrefs.InviteUrl).
+  O app manda a plataforma no hello (`GamePrefs.PlatformTag`: android, ios, site-iphone, site-android, site-pc, pc).
+  Instalações oficiais: Play Console (aqui, "contas novas no app" ≈ instalações que abriram o jogo).
+- Cópias: `Backups.cs`. Uma por dia (1 min após ligar e a cada 30 min confere), tabela account_backups, guarda 14 dias.
+  Painel: baixar cópia de agora/de um dia, restaurar (digitar RESTAURAR; antes guarda "antes-de-restaurar").
+  Restaurar volta as contas da cópia; contas criadas depois ficam. A cópia só tem o hash do token (não serve para entrar).
+
+## Mensagens prontas na partida
+- `Hosting/QuickChat` (16 mensagens; o NÚMERO vai pela rede — nunca reordenar, só acrescentar no fim), `QuickChatGate`
+  (1 a cada 2,5 s, 8 por minuto; servidor com folga de rede), `Hosting/BotBanter` (bots provocam/respondem pouco,
+  intervalo mínimo 8 s). Protocolo: chat {id} → chat {seat,id}. Servidor: `ServerCore.HandleChat` (ServerOptions.BotChat).
+- App: `Game/UI/QuickChatView` (botão de balão no canto do topo, quadro com as mensagens, balão em cima de quem falou,
+  "Ver dos outros: SIM/NÃO" = GamePrefs.QuickChatOn). Sessões implementam `IQuickChatSession` (offline e online).

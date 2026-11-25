@@ -10,7 +10,7 @@ namespace Fodinha.Online
     /// Partida online do ponto de vista deste aparelho. Recebe do servidor SÓ a visão deste jogador
     /// e envia pedidos; quem valida e roda as regras é o servidor.
     /// </summary>
-    public sealed class NetworkMatchSession : IMatchSession
+    public sealed class NetworkMatchSession : IMatchSession, IQuickChatSession
     {
         private readonly IOnlineSender sender;
         private readonly Func<float> clock;
@@ -20,6 +20,7 @@ namespace Fodinha.Online
         public event Action<MatchView> ViewChanged;
         public event Action<MatchEvent> EventReceived;
         public event Action<ActionResult> ActionRejected;
+        public event Action<int, int> ChatReceived;
 
         public NetworkMatchSession(IOnlineSender sender, Func<float> clock = null)
         {
@@ -65,5 +66,19 @@ namespace Fodinha.Online
         public void PlayCard(Card card) => sender.Send(Protocol.ToServer.Play, new PlayMsg { card = card.Id });
 
         public void ResumeControl() => sender.Send(Protocol.ToServer.Resume);
+
+        /// <summary>Manda só o número da mensagem; o balão aparece quando o servidor repassa (para todos ao mesmo tempo).</summary>
+        public void SendChat(int messageId)
+        {
+            if (Fodinha.Hosting.QuickChat.IsValid(messageId)) sender.Send(Protocol.ToServer.Chat, new ChatMsg { id = messageId });
+        }
+
+        /// <summary>Mensagem pronta de alguém da sala (vinda do servidor).</summary>
+        public void ApplyChat(ChatDto chat)
+        {
+            if (chat == null || chat.seat < 0 || !Fodinha.Hosting.QuickChat.IsValid(chat.id)) return;
+            if (View != null && chat.seat >= View.Players.Count) return;
+            ChatReceived?.Invoke(chat.seat, chat.id);
+        }
     }
 }

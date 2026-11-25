@@ -38,6 +38,7 @@ namespace Fodinha.Online
             screen.MenuRequested += OnMenuRequested;
 
             client.MatchReceived += session.Apply;
+            client.ChatReceived += session.ApplyChat;
             client.ErrorReceived += OnError;
             client.LeftRoom += OnLeft;
             client.ProfileReceived += OnProfile;
@@ -57,6 +58,7 @@ namespace Fodinha.Online
         {
             if (client == null) return;
             client.MatchReceived -= session.Apply;
+            client.ChatReceived -= session.ApplyChat;
             client.ErrorReceived -= OnError;
             client.LeftRoom -= OnLeft;
             client.ProfileReceived -= OnProfile;

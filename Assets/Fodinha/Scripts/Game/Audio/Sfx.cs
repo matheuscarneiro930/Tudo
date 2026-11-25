@@ -14,7 +14,8 @@ namespace Fodinha.Game.Audio
         LifeLost,
         Victory,
         Defeat,
-        Error
+        Error,
+        Chat
     }
 
     /// <summary>
@@ -99,6 +100,7 @@ namespace Fodinha.Game.Audio
                 case Sound.Defeat:
                     return Concat(Tone(392f, 0.18f, 0.3f, 10f), Tone(349.23f, 0.18f, 0.3f, 10f), Tone(261.63f, 0.5f, 0.3f, 5f));
                 case Sound.Error: return Square(180f, 0.14f, 0.18f);
+                case Sound.Chat: return Concat(Tone(1046.5f, 0.05f, 0.22f, 30f), Tone(1568f, 0.09f, 0.2f, 24f)); // "plim" do balão
                 default: return new float[1];
             }
         }

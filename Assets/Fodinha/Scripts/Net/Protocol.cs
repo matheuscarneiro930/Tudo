@@ -42,6 +42,8 @@ namespace Fodinha.Net
             public const string BuyItem = "buy_item";
             public const string EquipItem = "equip_item";
             public const string RedeemCode = "redeem_code";
+            /// <summary>Mensagem pronta na partida (<see cref="ChatMsg"/>: só o número da mensagem).</summary>
+            public const string Chat = "chat";
         }
 
         /// <summary>Mensagens do servidor para o cliente.</summary>
@@ -56,6 +58,8 @@ namespace Fodinha.Net
             public const string Pong = "pong";
             public const string Profile = "profile";
             public const string Ranking = "ranking";
+            /// <summary>Alguém da sala mandou uma mensagem pronta (<see cref="ChatDto"/>).</summary>
+            public const string Chat = "chat";
         }
 
         private static readonly JsonSerializerSettings Settings = new JsonSerializerSettings

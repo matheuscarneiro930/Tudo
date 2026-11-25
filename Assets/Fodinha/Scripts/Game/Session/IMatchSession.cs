@@ -50,4 +50,17 @@ namespace Fodinha.Game
         /// <summary>Um pedido deste jogador foi recusado (ex.: carta inválida, fora da vez).</summary>
         event Action<ActionResult> ActionRejected;
     }
+
+    /// <summary>
+    /// Partida com mensagens prontas (<see cref="Fodinha.Hosting.QuickChat"/>): sem texto livre, só o número.
+    /// Offline os bots respondem; online o servidor repassa para a sala.
+    /// </summary>
+    public interface IQuickChatSession
+    {
+        /// <summary>Alguém da mesa mandou uma mensagem: (assento, número da mensagem).</summary>
+        event Action<int, int> ChatReceived;
+
+        /// <summary>Manda uma mensagem pronta (quem roda a partida confere o limite).</summary>
+        void SendChat(int messageId);
+    }
 }

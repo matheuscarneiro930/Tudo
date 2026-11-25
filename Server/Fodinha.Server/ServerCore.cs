@@ -84,6 +84,12 @@ namespace Fodinha.Server
         /// <summary>Conexões simultâneas por IP e no total (aplicado pelo GameHost).</summary>
         public int MaxConnectionsPerAddress = 30;
         public int MaxConnections = 5000;
+
+        /// <summary>Bots das salas mandam mensagens prontas de vez em quando (provocações, "boa partida").</summary>
+        public bool BotChat = true;
+
+        /// <summary>Senha do painel do dono (/painel). Vem da variável ADMIN_KEY no Render; vazia = painel desligado.</summary>
+        public string AdminKey = "";
     }
 
     /// <summary>
@@ -99,6 +105,7 @@ namespace Fodinha.Server
         private readonly Dictionary<string, Player> byToken = new Dictionary<string, Player>();
         private readonly Dictionary<string, Room> rooms = new Dictionary<string, Room>();
         private readonly AccountBook accounts;
+        private readonly StatsBook stats;
         private double now;
         private int idCounter;
 
@@ -111,11 +118,12 @@ namespace Fodinha.Server
         private double nextCleanup;
         private const double Day = 86400.0, Hour = 3600.0;
 
-        public ServerCore(ServerOptions options = null, IRandomSource rng = null, AccountBook accounts = null)
+        public ServerCore(ServerOptions options = null, IRandomSource rng = null, AccountBook accounts = null, StatsBook stats = null)
         {
             this.options = options ?? new ServerOptions();
             this.rng = rng ?? new SystemRandomSource();
             this.accounts = accounts ?? new AccountBook();
+            this.stats = stats ?? new StatsBook();
         }
 
         public int RoomCount => rooms.Count;
@@ -123,6 +131,20 @@ namespace Fodinha.Server
         public int ConnectedCount => byLink.Count;
         public double Now => now;
         public AccountBook Accounts => accounts;
+        public StatsBook Stats => stats;
+
+        /// <summary>Partidas em andamento agora e humanos jogando nelas (para o painel).</summary>
+        public int MatchesInProgress => rooms.Values.Count(r => r.InMatch);
+        public int HumansInMatches => rooms.Values.Where(r => r.InMatch).Sum(r => r.Members.Count(m => !m.IsBot && !m.Left));
+
+        /// <summary>Restaura contas de uma cópia de segurança e manda o saldo novo para quem está conectado.</summary>
+        public RestoreResult RestoreAccounts(IEnumerable<Account> backup)
+        {
+            var result = accounts.Restore(backup);
+            foreach (var p in byToken.Values)
+                if (p.Link != null) SendProfile(p, 0, null);
+            return result;
+        }
 
         internal Room FindRoom(string code) => rooms.TryGetValue(code, out var r) ? r : null;
 
@@ -201,6 +223,7 @@ namespace Fodinha.Server
                 case Protocol.ToServer.BuyItem: HandleBuy(player, Protocol.Payload<ItemMsg>(env)); break;
                 case Protocol.ToServer.EquipItem: HandleEquip(player, Protocol.Payload<ItemMsg>(env)); break;
                 case Protocol.ToServer.RedeemCode: HandleRedeemCode(player, Protocol.Payload<CodeMsg>(env)); break;
+                case Protocol.ToServer.Chat: HandleChat(player, Protocol.Payload<ChatMsg>(env)); break;
                 default: SendError(link, ErrorCodes.BadMessage, "Tipo de mensagem desconhecido."); break;
             }
         }
@@ -214,6 +237,9 @@ namespace Fodinha.Server
 
             foreach (var room in rooms.Values.ToList())
             {
+                // Falas dos bots (continuam logo depois do fim, para responder a um "Boa partida!").
+                room.Banter?.Tick(dt);
+
                 if (room.InMatch)
                 {
                     room.Director.Tick(dt);
@@ -346,6 +372,8 @@ namespace Fodinha.Server
                     }
                     guard.NewAccounts.Add(now);
                     newAccountsGlobal.Add(now);
+                    stats.Add(Metric.NewAccounts);
+                    stats.Add(Metric.NewAccounts + "_" + Metric.NormalizePlatform(msg.platform));
                 }
                 string token = account != null ? msg.token : NewSecret(32);
                 player = new Player
@@ -364,6 +392,7 @@ namespace Fodinha.Server
             player.Link = link;
             byLink[link] = player;
             awaitingHello.Remove(link);
+            CountPlayer(player.Account, msg.platform);
 
             link.Send(Protocol.Encode(Protocol.ToClient.Welcome, new WelcomeMsg
             {
@@ -380,6 +409,16 @@ namespace Fodinha.Server
             }
             BroadcastRoom(room);
             if (room.InMatch) PublishMatch(room, force: true);
+        }
+
+        /// <summary>Painel: contas diferentes que jogaram hoje (no total e por plataforma) e o pico de conectados.</summary>
+        private void CountPlayer(Account account, string platform)
+        {
+            if (account == null) return;
+            string p = Metric.NormalizePlatform(platform);
+            if (stats.FirstToday(Metric.Players, account.Id)) stats.Add(Metric.Players);
+            if (stats.FirstToday(Metric.Players + "_" + p, account.Id)) stats.Add(Metric.Players + "_" + p);
+            stats.Peak(Metric.PeakOnline, byLink.Count);
         }
 
         private void HandleListRooms(Player player)
@@ -584,6 +623,25 @@ namespace Fodinha.Server
             room.PendingEvents.Clear();
             director.EventRaised += room.PendingEvents.Add;
 
+            // Bots da sala soltam mensagens prontas de vez em quando (reagindo aos lances e aos humanos).
+            room.Banter = null;
+            if (options.BotChat && room.Members.Any(m => m.IsBot))
+            {
+                var banter = new BotBanter(engine, director.IsBotSeat, new SystemRandomSource(rng.Next(int.MaxValue)));
+                banter.Spoke += (seat, id) => BroadcastChat(room, seat, id);
+                director.EventRaised += banter.OnEvent;
+                room.Banter = banter;
+            }
+
+            int humans = room.Members.Count(m => !m.IsBot);
+            stats.Add(Metric.Matches);
+            stats.Add(Metric.MatchHumans, humans);
+            if (stake > 0)
+            {
+                stats.Add(Metric.StakeMatches);
+                stats.Add(Metric.CoinsInPots, room.Pot);
+            }
+
             for (int seat = 0; seat < room.Members.Count; seat++)
             {
                 var m = room.Members[seat];
@@ -629,6 +687,33 @@ namespace Fodinha.Server
             if (room == null) return;
             room.Director.RequestResume(seat);
             PublishMatch(room);
+        }
+
+        /// <summary>
+        /// Mensagem pronta: só o número (nunca texto), de quem está na sala, com limite por jogador.
+        /// Excesso e número inválido são ignorados em silêncio (o app já apaga o botão no intervalo).
+        /// </summary>
+        private void HandleChat(Player player, ChatMsg msg)
+        {
+            var room = player.Room;
+            if (room == null || msg == null || !QuickChat.IsValid(msg.id)) return;
+            var member = room.Members.FirstOrDefault(m => m.Player == player);
+            if (member == null || member.Left || member.Seat < 0 || room.Engine == null) return;
+            if (!player.Chat.TryAccept(now)) return;
+            stats.Add(Metric.Chats);
+            BroadcastChat(room, member.Seat, msg.id);
+            room.Banter?.OnPlayerChat(member.Seat, msg.id);
+        }
+
+        private void BroadcastChat(Room room, int seat, int id)
+        {
+            if (!rooms.ContainsKey(room.Code)) return;
+            string json = Protocol.Encode(Protocol.ToClient.Chat, new ChatDto { seat = seat, id = id });
+            foreach (var m in room.Members)
+            {
+                if (m.IsBot || m.Left || m.Player.Link == null || m.Player.Room != room) continue;
+                m.Player.Send(json);
+            }
         }
 
         // ------------------------------------------------------------------ salas
@@ -728,6 +813,7 @@ namespace Fodinha.Server
                 else SendProfile(m.Player, 0, null);
             }
             room.Pot = 0;
+            stats.Add(Metric.MatchesFinished);
 
             room.InMatch = false;
             room.Director.EventRaised -= room.PendingEvents.Add;
@@ -885,6 +971,7 @@ namespace Fodinha.Server
             mine.Add(now);
             guard?.Rewards.Add(now);
             a.LastRewardAt = now;
+            stats.Add(Metric.Rewards);
             int gained = accounts.AddCoins(a, Math.Min(options.RewardAmount, options.RewardCap - a.Coins));
             foreach (var p in byToken.Values)
                 if (p.Account == a) SendProfile(p, gained, "recompensa");
@@ -912,6 +999,7 @@ namespace Fodinha.Server
             switch (accounts.Buy(player.Account, msg?.item))
             {
                 case PurchaseResult.Ok:
+                    stats.Add(Metric.ShopPurchases);
                     SendProfile(player, -item.Price, "compra");
                     break;
                 case PurchaseResult.AlreadyOwned:
@@ -959,6 +1047,7 @@ namespace Fodinha.Server
                 return;
             }
             a.CodeFailures = 0;
+            if (!a.NoAds) stats.Add(Metric.Vip);
             accounts.SetNoAds(a, true);
             SendProfile(player, 0, "vip");
         }
@@ -1010,6 +1099,7 @@ namespace Fodinha.Server
             public double DisconnectedAt;
             public Account Account;   // carteira (persistida)
             public readonly SlidingCounter JoinFailures = new SlidingCounter();
+            public readonly QuickChatGate Chat = new QuickChatGate(QuickChatGate.NetworkTolerance);
 
             public void Send(string json) => Link?.Send(json);
 
@@ -1047,6 +1137,7 @@ namespace Fodinha.Server
             public double AbandonedSince = -1;
             public int Pot;           // soma das entradas da partida atual
             public List<string> SeatAvatars = new List<string>();
+            public BotBanter Banter;  // mensagens prontas dos bots (null = sala sem bots)
 
             public Room(string code, RoomOptions options)
             {

@@ -44,6 +44,7 @@ namespace Fodinha.Game.UI
         private float toastUntil;
         private RoundResultPanel roundPanel;
         private MatchOverPanel matchOverPanel;
+        private QuickChatView chat;
         private MatchView view;
 
         /// <summary>Jogador pediu outra partida (tela de fim).</summary>
@@ -60,6 +61,7 @@ namespace Fodinha.Game.UI
         public bool IsRoundPanelVisible => roundPanel != null && roundPanel.gameObject.activeSelf;
         public bool IsMatchOverVisible => matchOverPanel != null && matchOverPanel.gameObject.activeSelf;
         public bool IsBetPanelVisible => betPanel != null && betPanel.gameObject.activeSelf;
+        public QuickChatView Chat => chat;
 
         private void Awake()
         {
@@ -84,6 +86,7 @@ namespace Fodinha.Game.UI
             session.ActionRejected += OnActionRejected;
             session.EventReceived += OnMatchEvent;
             table.AvatarProvider = session.AvatarOf;
+            chat.Bind(session as IQuickChatSession, SeatAnchor, () => session != null ? session.LocalSeat : -1, m => ShowToast(m));
             if (session.View != null) Render(session.View);
         }
 
@@ -94,6 +97,7 @@ namespace Fodinha.Game.UI
             session.ActionRejected -= OnActionRejected;
             session.EventReceived -= OnMatchEvent;
             table.AvatarProvider = null;
+            if (chat != null) chat.Unbind();
             session = null;
         }
 
@@ -218,6 +222,9 @@ namespace Fodinha.Game.UI
             matchOverPanel.MenuClicked += () => MenuRequested?.Invoke();
             matchOverPanel.Hide();
 
+            // Mensagens prontas por cima de tudo (o botão fica no canto do topo, livre até no fim da partida).
+            chat = QuickChatView.Create(safeRoot);
+
             betPanel.gameObject.SetActive(false);
             resumeButton.gameObject.SetActive(false);
             statusText.text = "Preparando a mesa...";
@@ -234,12 +241,12 @@ namespace Fodinha.Game.UI
 
             // Topo: só quantas cartas tem a mão ("3 cartas"); a vira fica no meio da mesa.
             roundTitle = UiKit.Label("Cartas", bar, "", 44, Palette.Text, TextAnchor.LowerLeft, FontStyle.Bold, true);
-            roundTitle.rectTransform.Anchor(0.2f, 0.45f, 0.66f, 0.95f);
+            roundTitle.rectTransform.Anchor(0.2f, 0.45f, 0.6f, 0.95f);
             roundDetail = UiKit.Label("Detalhe", bar, "", 30, Palette.TextMuted, TextAnchor.UpperLeft, FontStyle.Normal, true);
-            roundDetail.rectTransform.Anchor(0.2f, 0.05f, 0.66f, 0.45f);
+            roundDetail.rectTransform.Anchor(0.2f, 0.05f, 0.62f, 0.45f);
 
             manilhaText = UiKit.Label("Manilha", bar, "", 34, Palette.Accent, TextAnchor.MiddleRight, FontStyle.Bold, true);
-            manilhaText.rectTransform.Anchor(0.64f, 0.1f, 0.97f, 0.9f);
+            manilhaText.rectTransform.Anchor(0.6f, 0.1f, 0.865f, 0.9f); // à direita: botão de mensagens
         }
 
         private void BuildLocalStrip(RectTransform strip)
@@ -308,7 +315,19 @@ namespace Fodinha.Game.UI
                 matchOverShown = false;
             }
 
+            // Quem está sentado na mesa (mesmo eliminado) pode mandar mensagem; espectador não.
+            chat.SetButtonVisible(view.Me != null);
+
             UpdateTimers();
+        }
+
+        /// <summary>Onde fica cada assento na tela (o balão da mensagem aparece em cima).</summary>
+        private RectTransform SeatAnchor(int seat)
+        {
+            if (view != null && seat == view.ViewerSeat) return localAvatar.Image.rectTransform;
+            foreach (var sv in table.Seats)
+                if (sv.gameObject.activeSelf && sv.Seat == seat) return sv.Rect;
+            return null;
         }
 
         private void RenderTopBar()

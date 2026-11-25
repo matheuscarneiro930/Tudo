@@ -24,6 +24,7 @@ namespace Fodinha.Server.Tests
         public RankingMsg LastRanking;
         public WelcomeMsg Welcome;
         public int MatchUpdates;
+        public readonly List<ChatDto> Chats = new List<ChatDto>();
 
         private static int addressCounter;
 
@@ -61,6 +62,7 @@ namespace Fodinha.Server.Tests
                 case Protocol.ToClient.RoomList: LastList = Protocol.Payload<RoomListMsg>(env); break;
                 case Protocol.ToClient.Profile: Profile = Protocol.Payload<ProfileMsg>(env); break;
                 case Protocol.ToClient.Ranking: LastRanking = Protocol.Payload<RankingMsg>(env); break;
+                case Protocol.ToClient.Chat: Chats.Add(Protocol.Payload<ChatDto>(env)); break;
             }
         }
 
@@ -68,10 +70,10 @@ namespace Fodinha.Server.Tests
 
         public void Do(string type, object payload = null) => core.OnMessage(this, Protocol.Encode(type, payload));
 
-        public FakeClient Hello(string token = null, string avatar = null)
+        public FakeClient Hello(string token = null, string avatar = null, string platform = null)
         {
             core.OnConnected(this);
-            Do(Protocol.ToServer.Hello, new HelloMsg { name = Name, token = token, version = Protocol.Version, avatar = avatar });
+            Do(Protocol.ToServer.Hello, new HelloMsg { name = Name, token = token, version = Protocol.Version, avatar = avatar, platform = platform });
             return this;
         }
 

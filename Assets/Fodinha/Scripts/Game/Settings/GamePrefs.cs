@@ -26,12 +26,43 @@ namespace Fodinha.Game
         /// <summary>Site do jogo (versão para navegador; é por ele que quem tem iPhone joga).</summary>
         public const string SiteUrl = "https://fodinha-server-0ccs.onrender.com";
 
+        /// <summary>Link do convite: o site, marcado para o painel contar quantos chegaram por convite.</summary>
+        public const string InviteUrl = SiteUrl + "/?origem=convite";
+
         /// <summary>Mensagem do botão "Convidar amigos iOS": leva para o site (não para uma sala).</summary>
         public const string IosInviteMessage =
             "Bora jogar Fodinha Online comigo! 🃏\n" +
             "No iPhone, abre esse link no Safari e joga direto pelo navegador:\n" +
-            SiteUrl + "\n" +
+            InviteUrl + "\n" +
             "Dica: toque em Compartilhar → \"Adicionar à Tela de Início\" para ficar com o ícone do jogo.";
+
+        private const string KeyQuickChat = "fodinha.mensagens";
+
+        /// <summary>Mostrar as mensagens prontas dos outros jogadores na partida (as suas sempre aparecem).</summary>
+        public static bool QuickChatOn
+        {
+            get => PlayerPrefs.GetInt(KeyQuickChat, 1) == 1;
+            set { PlayerPrefs.SetInt(KeyQuickChat, value ? 1 : 0); PlayerPrefs.Save(); }
+        }
+
+        /// <summary>De onde joga (vai no "hello", só para os números do painel).</summary>
+        public static string PlatformTag => PlatformTagFor(Application.platform, SystemInfo.operatingSystem);
+
+        public static string PlatformTagFor(RuntimePlatform platform, string operatingSystem)
+        {
+            switch (platform)
+            {
+                case RuntimePlatform.Android: return "android";
+                case RuntimePlatform.IPhonePlayer: return "ios";
+                case RuntimePlatform.WebGLPlayer:
+                    string os = operatingSystem ?? "";
+                    if (os.IndexOf("iPhone", StringComparison.OrdinalIgnoreCase) >= 0 || os.IndexOf("iPad", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        os.IndexOf("iOS", StringComparison.OrdinalIgnoreCase) >= 0) return "site-iphone";
+                    if (os.IndexOf("Android", StringComparison.OrdinalIgnoreCase) >= 0) return "site-android";
+                    return "site-pc";
+                default: return "pc";
+            }
+        }
 
         /// <summary>Endereço do servidor (Configurações → Servidor). Vazio = padrão.</summary>
         public static string ServerUrl
