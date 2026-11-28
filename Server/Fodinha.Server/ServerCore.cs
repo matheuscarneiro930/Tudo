@@ -449,7 +449,7 @@ namespace Fodinha.Server
             var opts = OfficialOptions(msg?.options);
             if (opts == null || opts.Rules == null || opts.GetValidationErrors().Count > 0)
             {
-                player.SendError(ErrorCodes.InvalidOptions, "Configuração da sala inválida.");
+                player.SendError(ErrorCodes.InvalidOptions, InvalidOptionsMessage(opts, "Configuração da sala inválida."));
                 return;
             }
             if (rooms.Count >= options.MaxRooms)
@@ -537,7 +537,8 @@ namespace Fodinha.Server
             var opts = OfficialOptions(msg?.options);
             if (opts == null || opts.Rules == null || opts.GetValidationErrors().Count > 0 || opts.MaxPlayers < room.Members.Count)
             {
-                player.SendError(ErrorCodes.InvalidOptions, "Configuração inválida (o máximo não pode ser menor que os jogadores na sala).");
+                player.SendError(ErrorCodes.InvalidOptions,
+                    InvalidOptionsMessage(opts, "Configuração inválida (o máximo não pode ser menor que os jogadores na sala)."));
                 return;
             }
             // Golpe: subir o valor da sala na hora de começar (as moedas dos outros saem sem eles verem).
@@ -590,8 +591,17 @@ namespace Fodinha.Server
                 return;
             }
 
-            // Sala valendo moedas: todo humano precisa ter o valor; ele sai do saldo agora e vai para o pote.
+            // Partida alta (acima de 500): só em sala pública e com mais um jogador de verdade (bots não contam).
             int stake = room.Options.Stake;
+            int humans = room.Members.Count(m => !m.IsBot);
+            if (!room.Options.CanStartWith(humans))
+            {
+                player.SendError(ErrorCodes.NeedPlayers,
+                    room.Options.IsPublic ? RoomOptions.HighStakeNeedsRival(stake) : RoomOptions.HighStakeNeedsPublic);
+                return;
+            }
+
+            // Sala valendo moedas: todo humano precisa ter o valor; ele sai do saldo agora e vai para o pote.
             if (stake > 0)
             {
                 var broke = room.Members.FirstOrDefault(m => !m.IsBot && m.Player.Account.Coins < stake);
@@ -633,7 +643,6 @@ namespace Fodinha.Server
                 room.Banter = banter;
             }
 
-            int humans = room.Members.Count(m => !m.IsBot);
             stats.Add(Metric.Matches);
             stats.Add(Metric.MatchHumans, humans);
             if (stake > 0)
@@ -1070,6 +1079,10 @@ namespace Fodinha.Server
         }
 
         private string NewId(string prefix) => prefix + (++idCounter).ToString("x") + rng.Next(1 << 20).ToString("x");
+
+        /// <summary>Explica o motivo quando é a regra da partida alta; senão, a mensagem genérica.</summary>
+        private static string InvalidOptionsMessage(RoomOptions opts, string fallback) =>
+            opts != null && RoomOptions.IsHighStake(opts.Stake) && !opts.IsPublic ? RoomOptions.HighStakeNeedsPublic : fallback;
 
         /// <summary>Opções da sala com as regras oficiais forçadas (o app não consegue criar sala com outras regras).</summary>
         private static RoomOptions OfficialOptions(RoomOptions options)

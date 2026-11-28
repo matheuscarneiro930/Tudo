@@ -266,6 +266,29 @@ namespace Fodinha.Online.Tests
         }
 
         [Test]
+        public void PartidaAlta_SoComeca_ComOutroJogadorDeVerdade()
+        {
+            var state = Room("dono");
+            state.stake = 1000;
+            state.members.RemoveAt(2); // sai a Bia: só o dono e um bot
+            lobby.Render(state);
+            Assert.That(lobby.StartButton.interactable, Is.False);
+            Assert.That(UiKit.ButtonLabel(lobby.StartButton).text, Does.Contain("falta mais um jogador de verdade"));
+
+            var withBia = Room("dono");
+            withBia.stake = 1000;
+            lobby.Render(withBia);
+            Assert.That(lobby.StartButton.interactable, Is.True);
+            Assert.That(UiKit.ButtonLabel(lobby.StartButton).text, Does.StartWith("Iniciar partida"));
+
+            var cheap = Room("dono");
+            cheap.stake = 500;
+            cheap.members.RemoveAt(2);
+            lobby.Render(cheap);
+            Assert.That(lobby.StartButton.interactable, Is.True, "Até 500 começa contra bots.");
+        }
+
+        [Test]
         public void Dono_RemoveBot_EAlteraRegras()
         {
             lobby.Render(Room("dono"));

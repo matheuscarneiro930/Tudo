@@ -118,6 +118,80 @@ namespace Fodinha.Server.Tests
         }
 
         [Test]
+        public void PartidaAlta_SalaPrivada_EhRecusada()
+        {
+            var ana = Client("Ana");
+            SetCoins(ana, 3000);
+            ana.Create(new RoomOptions { IsPublic = false, Stake = 1000 });
+            Assert.That(ana.Room, Is.Null);
+            Assert.That(ana.LastError.code, Is.EqualTo(ErrorCodes.InvalidOptions));
+            Assert.That(ana.LastError.message, Is.EqualTo(RoomOptions.HighStakeNeedsPublic));
+
+            ana.Create(new RoomOptions { IsPublic = false, Stake = 500 });
+            Assert.That(ana.Room, Is.Not.Null, "Privada valendo 500 pode.");
+        }
+
+        [Test]
+        public void PartidaAlta_NaoViraPrivada()
+        {
+            var ana = Client("Ana");
+            SetCoins(ana, 3000);
+            ana.Create(new RoomOptions { IsPublic = true, Stake = 1000 });
+            Assert.That(ana.Room.stake, Is.EqualTo(1000));
+
+            ana.Do(Protocol.ToServer.UpdateOptions, new UpdateOptionsMsg { options = new RoomOptions { IsPublic = false, Stake = 1000 } });
+            Assert.That(ana.LastError.message, Is.EqualTo(RoomOptions.HighStakeNeedsPublic));
+            Assert.That(ana.Room.isPublic, Is.True);
+
+            ana.Do(Protocol.ToServer.UpdateOptions, new UpdateOptionsMsg { options = new RoomOptions { IsPublic = false, Stake = 500 } });
+            Assert.That(ana.Room.isPublic, Is.False, "Baixando para 500, pode ser privada.");
+            Assert.That(ana.Room.stake, Is.EqualTo(500));
+        }
+
+        [Test]
+        public void PartidaAlta_SoComBots_NaoComeca_NinguemPaga()
+        {
+            var ana = Client("Ana");
+            SetCoins(ana, 3000);
+            ana.Create(new RoomOptions { MaxPlayers = 4, Stake = 1000 });
+            ana.Do(Protocol.ToServer.AddBot);
+            ana.Do(Protocol.ToServer.AddBot);
+            ana.Do(Protocol.ToServer.StartMatch);
+            Assert.That(ana.Room.inMatch, Is.False);
+            Assert.That(ana.LastError.code, Is.EqualTo(ErrorCodes.NeedPlayers));
+            Assert.That(ana.LastError.message, Is.EqualTo(RoomOptions.HighStakeNeedsRival(1000)));
+            Assert.That(Coins(ana), Is.EqualTo(3000));
+        }
+
+        [Test]
+        public void PartidaAlta_ComOutroHumano_Comeca()
+        {
+            var ana = Client("Ana");
+            SetCoins(ana, 3000);
+            ana.Create(new RoomOptions { MaxPlayers = 4, Stake = 1000 });
+            ana.Do(Protocol.ToServer.AddBot);
+            var bia = Client("Bia");
+            SetCoins(bia, 1000);
+            bia.Join(ana.Room.code);
+            ana.Do(Protocol.ToServer.StartMatch);
+            Assert.That(ana.Room.inMatch, Is.True);
+            Assert.That(ana.Room.pot, Is.EqualTo(2000));
+            Assert.That(Coins(ana), Is.EqualTo(2000));
+            Assert.That(Coins(bia), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Valendo500_ContraBots_ContinuaPodendo()
+        {
+            var ana = Client("Ana");
+            ana.Create(new RoomOptions { IsPublic = false, MaxPlayers = 3, Stake = 500 });
+            ana.Do(Protocol.ToServer.AddBot);
+            ana.Do(Protocol.ToServer.StartMatch);
+            Assert.That(ana.Room.inMatch, Is.True);
+            Assert.That(ana.Room.pot, Is.EqualTo(500));
+        }
+
+        [Test]
         public void ValorInvalido_EhRecusado()
         {
             var ana = Client("Ana");

@@ -130,6 +130,8 @@ namespace Fodinha.EditorTools
                     var menu = UiKit.Rect("Menu", root).Fill().gameObject.AddComponent<Fodinha.Game.Menu.MenuScreen>();
                     menu.ShowPage(page);
                     if (page == Fodinha.Game.Menu.MenuScreen.Page.JoinRoom) menu.CodeField.text = "k7m2q";
+                    if (page == Fodinha.Game.Menu.MenuScreen.Page.CreateRoom) // partida alta: mostra o aviso
+                        menu.RoomRules.Load(Fodinha.Core.RuleSet.CreateDefault(), 8, true, 1000);
                     if (page == Fodinha.Game.Menu.MenuScreen.Page.Home) menu.SetCoins(350, true);
                     if (page == Fodinha.Game.Menu.MenuScreen.Page.Shop) menu.SetCoins(1250, false);
                     if (page == Fodinha.Game.Menu.MenuScreen.Page.Ranking)

@@ -83,6 +83,8 @@ Você está recebendo o projeto **Fodinha Online** (Unity 6000.4.7f1 + C#, celul
 - Cabeçalhos: nosniff, X-Frame-Options, CSP frame-ancestors, Referrer/Permissions-Policy, HSTS; sem "Server: Kestrel".
 - Nome: `NameFilter` (invisíveis, inversão de texto, zalgo, tags, ofensas graves — lista no código).
 - Golpe da sala: o valor (stake) só muda com o dono sozinho na sala.
+- Partida alta (valendo mais de 500, ou seja 1000): só em sala pública e só começa com pelo menos mais um
+  jogador de verdade além do dono (bots não contam). Regra em RoomOptions (IsHighStake/CanStart); o servidor confere.
 - Token novo: 32 bytes aleatórios (RandomNumberGenerator). No app, servidor digitado em Configurações usa outro token.
 - AdMob SSV: GET /admob/ssv confere a assinatura do Google (`AdMobVerifier`) e credita. Para EXIGIR vídeo verificado:
   1) AdMob → unidade premiada → Verificação no servidor → https://fodinha-server-0ccs.onrender.com/admob/ssv

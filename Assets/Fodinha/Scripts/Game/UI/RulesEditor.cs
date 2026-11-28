@@ -1,6 +1,7 @@
 using System;
 using Fodinha.Core;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Fodinha.Game.UI
 {
@@ -20,6 +21,7 @@ namespace Fodinha.Game.UI
         private OptionStepper turnTime;
         private OptionStepper timeouts;
         private OptionStepper stake;
+        private Text highStakeHint;
 
         public Mode EditorMode => mode;
 
@@ -44,6 +46,13 @@ namespace Fodinha.Game.UI
                 players = OptionStepper.Create(content, "Máx. jogadores", Range(RuleSet.MinPlayers, RuleSet.MaxPlayers, ""), 6);
                 stake = OptionStepper.Create(content, "Valor da partida",
                                              Map(Hosting.RoomOptions.AllowedStakes, v => v == 0 ? "Grátis" : v + " moedas"), 0);
+                highStakeHint = UiKit.Label("AvisoValorAlto", content, HighStakeHint, 30, Palette.Accent, TextAnchor.MiddleLeft, FontStyle.Normal, true);
+                UiControls.SetHeight(highStakeHint, 100f);
+
+                // Partida alta só em sala pública: escolher 1000 deixa a sala pública; escolher privada baixa para 500.
+                stake.Changed += _ => { if (Hosting.RoomOptions.IsHighStake(Stake)) visibility.SetIndex(1); RefreshHint(); };
+                visibility.Changed += _ => { if (!IsPublic) LimitPrivateStake(); RefreshHint(); };
+                RefreshHint();
             }
 
             turnTime = OptionStepper.Create(content, "Tempo para jogar a carta", Map(TurnTimes, v => v + " s"), 2);
@@ -78,6 +87,8 @@ namespace Fodinha.Game.UI
                 players.SetIndex(playerOrBotCount - RuleSet.MinPlayers);
                 visibility.SetIndex(isPublic ? 1 : 0);
                 stake.SetIndex(IndexOf(Hosting.RoomOptions.AllowedStakes, stakeValue, 0));
+                if (!isPublic) LimitPrivateStake(); // escolha antiga (privada valendo 1000) não vale mais
+                RefreshHint();
             }
 
             turnTime.SetIndex(IndexOf(TurnTimes, rules.TurnTimeSeconds, 2));
@@ -105,6 +116,26 @@ namespace Fodinha.Game.UI
         public int Stake => mode == Mode.Room ? Hosting.RoomOptions.AllowedStakes[stake.Index] : 0;
 
         public OptionStepper StakeStepper => stake;
+
+        public OptionStepper VisibilityStepper => visibility;
+
+        /// <summary>Aviso da partida alta (só aparece com valor acima de 500).</summary>
+        public Text HighStakeHintLabel => highStakeHint;
+
+        public static readonly string HighStakeHint =
+            "Acima de " + Hosting.RoomOptions.MaxStakeWithoutRivals + " moedas: só sala pública, e a partida só começa " +
+            "com mais um jogador de verdade (bots não contam).";
+
+        private void LimitPrivateStake()
+        {
+            if (Hosting.RoomOptions.IsHighStake(Stake))
+                stake.SetIndex(IndexOf(Hosting.RoomOptions.AllowedStakes, Hosting.RoomOptions.MaxStakeWithoutRivals, 0));
+        }
+
+        private void RefreshHint()
+        {
+            if (highStakeHint != null) highStakeHint.gameObject.SetActive(Hosting.RoomOptions.IsHighStake(Stake));
+        }
 
         public OptionStepper PlayersStepper => players;
 

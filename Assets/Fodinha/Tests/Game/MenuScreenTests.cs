@@ -212,6 +212,35 @@ namespace Fodinha.Game.Tests
         }
 
         [Test]
+        public void CriarSala_PartidaAlta_SoPublica_ComAviso()
+        {
+            menu.ShowPage(MenuScreen.Page.CreateRoom);
+            var rules = menu.RoomRules;
+            rules.Load(RuleSet.CreateDefault(), 4, false, 500);
+            Assert.That(rules.IsPublic, Is.False);
+            Assert.That(rules.HighStakeHintLabel.gameObject.activeSelf, Is.False, "Até 500 não tem aviso.");
+
+            rules.StakeStepper.Step(1); // 1000
+            Assert.That(rules.Stake, Is.EqualTo(1000));
+            Assert.That(rules.IsPublic, Is.True, "Escolher 1000 deixa a sala pública.");
+            Assert.That(rules.HighStakeHintLabel.gameObject.activeSelf, Is.True);
+
+            rules.VisibilityStepper.Step(-1); // privada
+            Assert.That(rules.IsPublic, Is.False);
+            Assert.That(rules.Stake, Is.EqualTo(500), "Sala privada baixa o valor para 500.");
+            Assert.That(rules.HighStakeHintLabel.gameObject.activeSelf, Is.False);
+
+            // Escolha antiga salva no celular (privada valendo 1000) não vale mais.
+            rules.Load(RuleSet.CreateDefault(), 4, false, 1000);
+            Assert.That(rules.Stake, Is.EqualTo(500));
+            RoomOptions received = null;
+            menu.CreateRoomRequested += o => received = o;
+            FooterOf(MenuScreen.Page.CreateRoom).onClick.Invoke();
+            Assert.That(received.IsPublic, Is.False);
+            Assert.That(received.Stake, Is.EqualTo(500));
+        }
+
+        [Test]
         public void ConvidarAmigosIos_PedeConvite_ComLinkDoSite()
         {
             bool asked = false;

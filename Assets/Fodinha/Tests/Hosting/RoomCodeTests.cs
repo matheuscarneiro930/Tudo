@@ -52,6 +52,26 @@ namespace Fodinha.Hosting.Tests
         }
 
         [Test]
+        public void PartidaAlta_SoEmSalaPublica_EComOutroHumano()
+        {
+            Assert.That(RoomOptions.IsHighStake(500), Is.False);
+            Assert.That(RoomOptions.IsHighStake(1000), Is.True);
+
+            var privada = new RoomOptions { IsPublic = false, Stake = 1000 };
+            Assert.That(privada.GetValidationErrors(), Has.Member(RoomOptions.HighStakeNeedsPublic));
+            privada.Stake = 500;
+            Assert.That(privada.GetValidationErrors(), Is.Empty, "Privada valendo 500 continua valendo.");
+
+            var publica = new RoomOptions { IsPublic = true, Stake = 1000 };
+            Assert.That(publica.GetValidationErrors(), Is.Empty);
+            Assert.That(publica.CanStartWith(1), Is.False, "Só o dono (o resto bots) não começa.");
+            Assert.That(publica.CanStartWith(2), Is.True);
+            publica.Stake = 500;
+            Assert.That(publica.CanStartWith(1), Is.True, "Até 500 dá para jogar contra bots.");
+            Assert.That(RoomOptions.CanStart(1000, false, 5), Is.False);
+        }
+
+        [Test]
         public void OpcoesDeSala_CloneIndependente()
         {
             var o = new RoomOptions();

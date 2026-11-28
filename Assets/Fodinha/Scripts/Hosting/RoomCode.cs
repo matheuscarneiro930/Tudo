@@ -58,6 +58,29 @@ namespace Fodinha.Hosting
         /// <summary>Valores que o dono da sala pode escolher (0 = grátis).</summary>
         public static readonly int[] AllowedStakes = { 0, 50, 100, 200, 500, 1000 };
 
+        /// <summary>
+        /// Acima deste valor a partida é "alta": só em sala pública e só começa com pelo menos mais um
+        /// jogador de verdade além do dono (bots não contam). Partida alta é contra gente.
+        /// </summary>
+        public const int MaxStakeWithoutRivals = 500;
+
+        /// <summary>Jogadores de verdade (não bots) para começar uma partida alta.</summary>
+        public const int MinHumansForHighStake = 2;
+
+        public static bool IsHighStake(int stake) => stake > MaxStakeWithoutRivals;
+
+        public static readonly string HighStakeNeedsPublic =
+            "Partida valendo mais de " + MaxStakeWithoutRivals + " moedas só em sala pública.";
+
+        public static string HighStakeNeedsRival(int stake) =>
+            "Partida valendo " + stake + " moedas precisa de mais um jogador de verdade (bots não contam).";
+
+        /// <summary>A partida pode começar com <paramref name="humans"/> jogadores de verdade na sala?</summary>
+        public bool CanStartWith(int humans) => CanStart(Stake, IsPublic, humans);
+
+        public static bool CanStart(int stake, bool isPublic, int humans) =>
+            !IsHighStake(stake) || (isPublic && humans >= MinHumansForHighStake);
+
         public RoomOptions Clone()
         {
             var copy = (RoomOptions)MemberwiseClone();
@@ -72,6 +95,8 @@ namespace Fodinha.Hosting
                 errors.Add("A sala deve ter entre " + RuleSet.MinPlayers + " e " + RuleSet.MaxPlayers + " jogadores.");
             if (Array.IndexOf(AllowedStakes, Stake) < 0)
                 errors.Add("Valor da partida inválido.");
+            else if (IsHighStake(Stake) && !IsPublic)
+                errors.Add(HighStakeNeedsPublic);
             return errors;
         }
     }

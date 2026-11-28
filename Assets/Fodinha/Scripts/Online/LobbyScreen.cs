@@ -171,10 +171,15 @@ namespace Fodinha.Online
             startButton.gameObject.SetActive(owner);
             waitingText.gameObject.SetActive(!owner);
             botButton.interactable = state.members.Count < state.maxPlayers;
-            startButton.interactable = state.members.Count >= RuleSet.MinPlayers;
-            UiKit.ButtonLabel(startButton).text = state.members.Count >= RuleSet.MinPlayers
-                ? "Iniciar partida (" + state.members.Count + " jogadores)"
-                : "Precisa de 2 jogadores (adicione um bot)";
+            int humans = 0;
+            foreach (var m in state.members) if (!m.bot) humans++;
+            bool enoughPlayers = state.members.Count >= RuleSet.MinPlayers;
+            // Partida alta (acima de 500) só começa com mais um jogador de verdade (o servidor confere de novo).
+            bool rivalOk = RoomOptions.CanStart(state.stake, state.isPublic, humans);
+            startButton.interactable = enoughPlayers && rivalOk;
+            UiKit.ButtonLabel(startButton).text = !enoughPlayers ? "Precisa de 2 jogadores (adicione um bot)"
+                : !rivalOk ? "Valendo " + state.stake + ": falta mais um jogador de verdade"
+                : "Iniciar partida (" + state.members.Count + " jogadores)";
         }
 
         private void AddPlayerRow(MemberDto m, int index, bool iAmOwner, string you)
